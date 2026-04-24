@@ -6,36 +6,59 @@ spring:
     name: gateway-service
   cloud:
     gateway:
+      default-filters:
+        - RewriteLocationResponseHeader=AS_IN_REQUEST, Location, .*
+      forwarded:
+        enabled: true
+      x-forwarded:
+        enabled: true
+        for-enabled: true
+        host-enabled: true
+        port-enabled: true
+        proto-enabled: true
+        prefix-enabled: true
       routes:
         # 1. Auth Service (인증 관련 엔드포인트)
         - id: auth-module
           uri: http://localhost:8080
           predicates:
-            - Path=/login, /logout, /oauth2/**, /api/v1/login, /api/v1/users/signup, /api/v1/refresh, /api/v1/waiting-room/**, /.well-known/**, /favicon.ico
+            - Path=/login, /login.html, /signup.html, /logout, /oauth2/**, /api/v1/login, /api/v1/users/signup, /api/v1/users/me, /api/v1/logout, /api/v1/refresh, /api/v1/waiting-room/**, /.well-known/**, /favicon.ico
+          filters:
+            - RewritePath=^/me/?(?<segment>.*), /$\{segment}
+
+        # Auth: /me 페이지 → auth 모듈 index.html
+        - id: me-page
+          uri: http://localhost:8080
+          predicates:
+            - Path=/me, /me/**, /api/v1/users/me, /api/v1/users/me**,
+          filters:
+            # - RewritePath=/me/?, /index.html
+            - RewritePath=^/me/?(?<segment>.*), /$\{segment}
+
 
         # 2. Preview Service (Public)
         - id: preview-module
           uri: http://localhost:8084
           predicates:
-            - Path=/preview/**, /api/v1/preview/**
+            - Path=/preview, /preview/**, /api/v1/preview, /api/v1/preview/**
           filters:
-            - RewritePath=/preview/?(?<segment>.*), /$\{segment}
+            - RewritePath=^/preview/?(?<segment>.*), /$\{segment}
 
         # 3. Matching Service (Private)
         - id: matching-module
           uri: http://localhost:8081
           predicates:
-            - Path=/matching/**, /api/v1/matching/**
+            - Path=/matching, /matching/**, /api/v1/matching, /api/v1/matching/**
           filters:
-            - RewritePath=/matching/?(?<segment>.*), /$\{segment}
+            - RewritePath=^/matching/?(?<segment>.*), /$\{segment}
 
         # 4. Task Service (Private)
         - id: task-module
           uri: http://localhost:8083
           predicates:
-            - Path=/tasks/**, /api/v1/tasks/**, /api/v1/dates/**
+            - Path=/tasks, /tasks/**, /api/tasks, /api/tasks/**, /api/v1/tasks, /api/v1/tasks/**, /api/v1/dates/**
           filters:
-            - RewritePath=/tasks/?(?<segment>.*), /$\{segment}
+            - RewritePath=^/tasks/?(?<segment>.*), /$\{segment}
 
 logging:
   level:

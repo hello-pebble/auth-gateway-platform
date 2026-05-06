@@ -42,7 +42,7 @@ class UserControllerMeTest @Autowired constructor(
     @BeforeEach
     fun setUp() {
         // 1. Create test user
-        userService.signUp(username, password)
+        userService.signUp(username, null, password)
 
         // 2. Issue JWT token
         accessToken = jwtProvider.createAccessToken(username, "ROLE_USER")

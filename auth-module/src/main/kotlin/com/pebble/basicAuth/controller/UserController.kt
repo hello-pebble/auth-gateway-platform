@@ -140,6 +140,16 @@ class UserController(
         return ResponseEntity.ok(response)
     }
 
+    @PatchMapping("/api/v1/users/password")
+    @ResponseBody
+    fun changePassword(
+        authentication: Authentication,
+        @Valid @RequestBody request: PasswordChangeRequest
+    ): ResponseEntity<String> {
+        userService.changePassword(authentication.name, request.oldPassword, request.newPassword)
+        return ResponseEntity.ok("비밀번호가 성공적으로 변경되었습니다.")
+    }
+
     data class UserSignUpRequest(
         @field:NotBlank(message = "사용자명은 필수입니다.")
         @field:Size(min = 4, max = 30, message = "사용자명은 4자 이상 30자 이하이어야 합니다.")
@@ -155,6 +165,14 @@ class UserController(
         val username: String = "",
         @field:NotBlank(message = "비밀번호는 필수입니다.")
         val password: String = ""
+    )
+
+    data class PasswordChangeRequest(
+        @field:NotBlank(message = "기존 비밀번호는 필수입니다.")
+        val oldPassword: String,
+        @field:NotBlank(message = "새 비밀번호는 필수입니다.")
+        @field:Size(min = 8, message = "새 비밀번호는 최소 8자 이상이어야 합니다.")
+        val newPassword: String
     )
     
     data class UserResponse(

@@ -40,6 +40,18 @@ class UserService(
     }
 
     @Transactional
+    fun changePassword(username: String, oldPassword: String, newPassword: String) {
+        val user = findByUsername(username)
+        
+        if (user.password == null || !passwordEncoder.matches(oldPassword, user.password)) {
+            throw UserException("기존 비밀번호가 일치하지 않습니다.")
+        }
+
+        val encodedPassword = passwordEncoder.encode(newPassword)
+        userRepository.save(user.copy(password = encodedPassword))
+    }
+
+    @Transactional
     fun saveOrUpdateSocialUser(provider: String, providerId: String, email: String?, name: String?): User {
         return userRepository.findByProviderAndProviderIdAndDeletedAtIsNull(provider, providerId)
             .orElseGet {

@@ -106,7 +106,7 @@ graph LR
     style S1 fill:#333,color:#fff,stroke:#000
     style S2 fill:#333,color:#fff,stroke:#000
     style S3 fill:#333,color:#fff,stroke:#000
-    style AuthS fill:#333,stroke:#fff,stroke:#000,stroke-width:2px
+    style AuthS fill:#333,stroke:#fff,stroke-width:2px
     style Target fill:#333,color:#fff,stroke:#fff,stroke-dasharray: 5 5
 ```
 ---
@@ -162,6 +162,6 @@ graph LR
 - **Testing**: JUnit 5, Mockito-Kotlin
 
 ---
-[https://api-gateway-m46j.onrender.com](https://api-gateway-m46j.onrender.com) (Gateway Portal)
-[https://preview-l7aj.onrender.com](https://preview-l7aj.onrender.com) (Previwe Portal)
-[https://task-1px8.onrender.com](https://task-1px8.onrender.com) (Task Portal)
+* [https://api-gateway-m46j.onrender.com](https://api-gateway-m46j.onrender.com) (Gateway Portal)
+* [https://preview-l7aj.onrender.com](https://preview-l7aj.onrender.com) (Previwe Portal)
+* [https://task-1px8.onrender.com](https://task-1px8.onrender.com) (Task Portal)

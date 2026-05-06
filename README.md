@@ -106,7 +106,7 @@ graph LR
     style S1 fill:#333,color:#fff,stroke:#000
     style S2 fill:#333,color:#fff,stroke:#000
     style S3 fill:#333,color:#fff,stroke:#000
-    style AuthS fill:#333,stroke:#fff,stroke:#000,stroke-width:2px
+    style AuthS fill:#333,stroke:#fff,stroke-width:2px
     style Target fill:#333,color:#fff,stroke:#fff,stroke-dasharray: 5 5
 ```
 ---

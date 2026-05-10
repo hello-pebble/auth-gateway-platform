@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: basic-auth-dev
+
+  # Local Development Database: H2
+  datasource:
+    url: jdbc:h2:mem:authdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        trace: false
+        web-allow-others: true
+
+  jpa:
+    database: h2
+    generate-ddl: true
+    show-sql: true
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+
+  # Development OAuth2 Mock (Set actual values in env or IDE if testing real OAuth)
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+
+server:
+  port: 8080
+  forward-headers-strategy: native
+
+auth:
+  cookie:
+    secure: false  # 로컬 HTTP 환경에서 쿠키 전달 허용
+
+# Development JWT Settings
+jwt:
+  secret: ${JWT_SECRET:vmgp-dev-secret-key-at-least-256-bits-long-for-hs512-algorithm}
+  access-expiration: 3600000 # 1 hour
+  refresh-expiration: 86400000 # 1 day
+
+# Logging for easier debugging
+logging:
+  level:
+    root: INFO
+    com.pebble.basicAuth: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

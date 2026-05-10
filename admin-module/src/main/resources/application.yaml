@@ -1,0 +1,19 @@
+server:
+  port: ${PORT:8085}
+
+spring:
+  application:
+    name: admin-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${AUTH_SERVICE_URL:http://localhost:8080}/oauth2/jwks
+
+matching:
+  internal-url: ${MATCHING_SERVICE_URL:http://localhost:8081}
+
+logging:
+  level:
+    com.pebble.admin: DEBUG
+    org.springframework.security: DEBUG

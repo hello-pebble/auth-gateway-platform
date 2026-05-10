@@ -1,4 +1,7 @@
 HELP.md
+CLAUDE.md
+GEMINI.md
+**dev.yaml
 .gradle
 **/build/
 !gradle/wrapper/gradle-wrapper.jar

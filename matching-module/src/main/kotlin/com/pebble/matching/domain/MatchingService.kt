@@ -24,7 +24,8 @@ class MatchingService(
 
     fun rankUser(fromUserId: Long, toUserId: Long, rank: Int): MatchResult {
         if (fromUserId == toUserId) throw IllegalArgumentException("본인에게 순위를 부여할 수 없습니다.")
-        
+        if (store.isBlocked(toUserId)) throw IllegalArgumentException("차단된 사용자에게 순위를 부여할 수 없습니다.")
+
         val ranking = MatchRanking(fromUserId, toUserId, rank)
         store.saveRanking(ranking)
 
@@ -43,8 +44,8 @@ class MatchingService(
     }
 
     fun updateExposure(userId: Long, isExposed: Boolean) {
-        val profile = MatchingProfile(userId, isExposed, LocalDateTime.now())
-        store.saveProfile(profile)
+        val existing = store.getProfile(userId) ?: MatchingProfile(userId)
+        store.saveProfile(existing.copy(isExposed = isExposed, updatedAt = LocalDateTime.now()))
     }
 
     fun getMyMatches(userId: Long): List<ChatMatch> = store.getMatchesForUser(userId)

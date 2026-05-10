@@ -47,13 +47,49 @@ class MatchingServiceTest {
     fun `Exposed users only in recommendations`() {
         val userA = 1L
         val userB = 2L
-        
+
         matchingService.updateExposure(userB, true)
         `when`(userProvider.getUserInfo(userB)).thenReturn(ExternalUser(userB, "userB"))
-        
+
         val recommendations = matchingService.getRecommendations(userA)
-        
+
         assertEquals(1, recommendations.size)
         assertEquals("userB", recommendations[0].username)
+    }
+
+    @Test
+    fun `Blocked user is excluded from recommendations`() {
+        val userA = 1L
+        val userB = 2L
+
+        matchingService.updateExposure(userB, true)
+        store.blockUser(userB, true)
+        `when`(userProvider.getUserInfo(userB)).thenReturn(ExternalUser(userB, "userB"))
+
+        val recommendations = matchingService.getRecommendations(userA)
+
+        assertEquals(0, recommendations.size)
+    }
+
+    @Test
+    fun `Blocked user cannot receive ranking`() {
+        val fromUserId = 1L
+        val blockedUserId = 2L
+
+        store.blockUser(blockedUserId, true)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            matchingService.rankUser(fromUserId, blockedUserId, 1)
+        }
+    }
+
+    @Test
+    fun `updateExposure preserves isBlocked status`() {
+        val userId = 1L
+        store.blockUser(userId, true)
+
+        matchingService.updateExposure(userId, true)
+
+        assertTrue(store.isBlocked(userId))
     }
 }

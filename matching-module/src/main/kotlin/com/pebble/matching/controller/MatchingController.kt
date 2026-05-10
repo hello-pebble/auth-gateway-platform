@@ -5,7 +5,8 @@ import com.pebble.matching.domain.MatchResult
 import com.pebble.matching.domain.MatchingService
 import com.pebble.matching.domain.RecommendedUser
 import org.springframework.http.ResponseEntity
-import org.springframework.security.core.Authentication
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -13,38 +14,68 @@ import org.springframework.web.bind.annotation.*
 class MatchingController(
     private val matchingService: MatchingService
 ) {
-    // 임시로 Principal의 name을 ID(Long)로 변환하여 사용하거나, 
-    // 별도의 UserResolver를 통해 ID를 주입받는 방식을 가정합니다.
-    private fun getUserId(authentication: Authentication): Long {
-        // 실제 운영 시에는 JWT 클레임에서 ID를 추출하는 방식으로 구현
-        return authentication.name.toLongOrNull() ?: 0L 
+    private fun getUserIdFromJwt(jwt: Jwt?): Long {
+        return jwt?.subject?.toLongOrNull() ?: 0L
     }
 
     @GetMapping("/recommendations")
-    fun getRecommendations(authentication: Authentication): ResponseEntity<List<RecommendedUser>> {
-        return ResponseEntity.ok(matchingService.getRecommendations(getUserId(authentication)))
+    fun getRecommendations(@AuthenticationPrincipal jwt: Jwt): ResponseEntity<List<RecommendedUser>> {
+        return ResponseEntity.ok(matchingService.getRecommendations(getUserIdFromJwt(jwt)))
     }
 
     @PostMapping("/rank")
     fun rankUser(
-        authentication: Authentication,
+        @AuthenticationPrincipal jwt: Jwt,
         @RequestBody request: RankRequest
     ): ResponseEntity<MatchResult> {
-        return ResponseEntity.ok(matchingService.rankUser(getUserId(authentication), request.toUserId, request.rank))
+        return ResponseEntity.ok(matchingService.rankUser(getUserIdFromJwt(jwt), request.toUserId, request.rank))
     }
 
     @PutMapping("/exposure")
     fun updateExposure(
-        authentication: Authentication,
+        @AuthenticationPrincipal jwt: Jwt,
         @RequestBody request: ExposureRequest
     ): ResponseEntity<String> {
-        matchingService.updateExposure(getUserId(authentication), request.isExposed)
+        matchingService.updateExposure(getUserIdFromJwt(jwt), request.isExposed)
         return ResponseEntity.ok("매칭 노출 설정이 변경되었습니다.")
     }
 
     @GetMapping("/matches")
-    fun getMyMatches(authentication: Authentication): ResponseEntity<List<ChatMatch>> {
-        return ResponseEntity.ok(matchingService.getMyMatches(getUserId(authentication)))
+    fun getMyMatches(@AuthenticationPrincipal jwt: Jwt): ResponseEntity<List<ChatMatch>> {
+        return ResponseEntity.ok(matchingService.getMyMatches(getUserIdFromJwt(jwt)))
+    }
+
+    @GetMapping("/access-info")
+    fun getAccessInfo(
+        @RequestHeader headers: Map<String, String>,
+        @AuthenticationPrincipal jwt: Jwt?
+    ): ResponseEntity<Map<String, Any>> {
+        val response = mutableMapOf<String, Any>()
+        response["service"] = "Matching Service"
+        
+        val accessInfo = mapOf(
+            "viaGateway" to headers.containsKey("x-forwarded-host"),
+            "gatewayHeaders" to headers.filterKeys { it.startsWith("x-") }
+        )
+        
+        val authInfo = mutableMapOf<String, Any>()
+        if (jwt != null) {
+            authInfo["authenticated"] = true
+            authInfo["subject"]       = jwt.subject
+            authInfo["roles"]         = jwt.claims["roles"]?.toString() ?: ""
+            authInfo["token_preview"] = jwt.tokenValue.take(15) + "..."
+        } else {
+            authInfo["authenticated"] = false
+        }
+
+        val matches = if (jwt != null) matchingService.getMyMatches(getUserIdFromJwt(jwt)) else emptyList()
+
+        response["accessInfo"]   = accessInfo
+        response["authInfo"]     = authInfo
+        response["matchesCount"] = matches.size
+        response["matches"]      = matches
+        
+        return ResponseEntity.ok(response)
     }
 
     data class RankRequest(val toUserId: Long, val rank: Int)

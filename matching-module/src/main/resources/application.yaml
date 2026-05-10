@@ -1,14 +1,28 @@
 server:
-  port: 8081
+  port: ${PORT:8081}
 
 spring:
   application:
     name: matching-service
+
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8080
+          jwk-set-uri: ${AUTH_SERVICE_URL:http://localhost:8080}/oauth2/jwks
 
-auth-server:
-  url: http://localhost:8080
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:matchingdb}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+logging:
+  level:
+    com.pebble.matching: DEBUG
+    org.springframework.security: DEBUG

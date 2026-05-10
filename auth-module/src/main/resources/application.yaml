@@ -1,36 +1,55 @@
 spring:
   application:
     name: basic-auth
-  datasource:
-    url: jdbc:postgresql://db.dccrpwphbvgfbzbsvqls.supabase.co:5432/postgres
-    username: postgres
-    password: ${DB_PASSWORD}
-    driver-class-name: org.postgresql.Driver
-  data:
-    redis:
-      host: localhost
-      port: 6379
-  jpa:
-    generate-ddl: true
-    show-sql: true
-    hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: ${GOOGLE_CLIENT_ID}
-            client-secret: ${GOOGLE_CLIENT_SECRET}
-            scope:
-              - email
-              - profile
+
+server:
+  address: 0.0.0.0
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+
+datasource:
+  url: ${DB_URL}
+  username: ${DB_USERNAME}
+  password: ${DB_PASSWORD}
+  driver-class-name: org.postgresql.Driver
+
+h2:
+  console:
+    enabled: false
+
+jpa:
+  database: postgresql
+  generate-ddl: true
+  show-sql: true
+  hibernate:
+    ddl-auto: update
+
+security:
+  oauth2:
+    client:
+      registration:
+        google:
+          client-id: ${GOOGLE_CLIENT_ID}
+          client-secret: ${GOOGLE_CLIENT_SECRET}
+          scope:
+            - email
+            - profile
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always
 
 jwt:
-  secret: z8vB7yK2pL5mN9qR3wX0sT6vF1gH4jK8lO2pM5nQ9rS3uW6xY0zB2cE5fH8kK1mN
-  access-expiration: 900000 # 15 min (15 * 60 * 1000)
-  refresh-expiration: 604800000 # 7 days (7 * 24 * 60 * 60 * 1000)
+  secret: ${JWT_SECRET}
+  access-expiration: 900000
+  refresh-expiration: 604800000
+
+auth:
+  gateway-url: ${GATEWAY_URL}
+  redirect-path: ${REDIRECT_PATH}

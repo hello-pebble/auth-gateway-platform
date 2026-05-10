@@ -5,6 +5,7 @@ import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
 import com.nimbusds.jose.jwk.source.JWKSource
 import com.nimbusds.jose.proc.SecurityContext
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.Ordered
@@ -18,7 +19,6 @@ import org.springframework.security.oauth2.core.oidc.OidcScopes
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository
-import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings
 import org.springframework.security.web.SecurityFilterChain
@@ -31,21 +31,32 @@ import java.security.interfaces.RSAPublicKey
 import java.util.*
 
 @Configuration
-class AuthorizationServerConfig {
+class AuthorizationServerConfig(
+    @Value("\${auth.issuer-uri:http://localhost:8080}") private val issuerUri: String,
+    @Value("\${OAUTH2_CLIENT_SECRET:{noop}secret}") private val oauth2ClientSecret: String,
+    @Value("\${OAUTH2_REDIRECT_URI:http://127.0.0.1:8080/login/oauth2/code/base-auth-client}") private val oauth2RedirectUri: String
+) {
 
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     @Throws(Exception::class)
     fun authorizationServerSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
-        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http)
-        http.getConfigurer(OAuth2AuthorizationServerConfigurer::class.java)
-            .oidc(Customizer.withDefaults()) // OpenID Connect 활성화
+        val authorizationServerConfigurer = OAuth2AuthorizationServerConfigurer()
+        
+        http
+            .securityMatcher(authorizationServerConfigurer.endpointsMatcher)
+            .with(authorizationServerConfigurer) { configurer ->
+                configurer.oidc(Customizer.withDefaults()) // OpenID Connect 활성화
+            }
+            .csrf { csrf ->
+                csrf.ignoringRequestMatchers(authorizationServerConfigurer.endpointsMatcher)
+            }
 
         http
             .exceptionHandling { exceptions ->
                 exceptions
                     .defaultAuthenticationEntryPointFor(
-                        LoginUrlAuthenticationEntryPoint("/login"),
+                        LoginUrlAuthenticationEntryPoint("/login.html"),
                         MediaTypeRequestMatcher(MediaType.TEXT_HTML)
                     )
             }
@@ -60,12 +71,12 @@ class AuthorizationServerConfig {
     fun registeredClientRepository(): RegisteredClientRepository {
         val registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
             .clientId("base-auth-client")
-            .clientSecret("{noop}secret") // {noop}은 암호화되지 않은 평문임을 의미
+            .clientSecret(oauth2ClientSecret)
             .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
             .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
             .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
             .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
-            .redirectUri("http://127.0.0.1:8080/login/oauth2/code/base-auth-client")
+            .redirectUri(oauth2RedirectUri)
             .scope(OidcScopes.OPENID)
             .scope(OidcScopes.PROFILE)
             .build()
@@ -100,7 +111,7 @@ class AuthorizationServerConfig {
     @Bean
     fun authorizationServerSettings(): AuthorizationServerSettings {
         return AuthorizationServerSettings.builder()
-            .issuer("http://localhost:8080")
+            .issuer(issuerUri)
             .build()
     }
 }

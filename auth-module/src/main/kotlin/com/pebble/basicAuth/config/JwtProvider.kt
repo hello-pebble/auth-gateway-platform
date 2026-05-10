@@ -14,7 +14,8 @@ import java.util.*
 
 @Component
 class JwtProvider(
-    private val jwkSource: JWKSource<SecurityContext>
+    private val jwkSource: JWKSource<SecurityContext>,
+    @Value("\${auth.issuer-uri:http://localhost:8080}") private val issuerUri: String
 ) {
 
     @Value("\${jwt.access-expiration}")
@@ -47,7 +48,7 @@ class JwtProvider(
         val expiryDate = Date(now.time + expiration)
 
         return Jwts.builder()
-            .issuer("http://localhost:8080") // Issuer 정보 추가
+            .issuer(issuerUri)
             .subject(username)
             .claims(claims)
             .issuedAt(now)

@@ -1,10 +1,10 @@
 plugins {
     java
-    id("org.springframework.boot") version "3.4.3" apply false
+    id("org.springframework.boot") version "3.5.3" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
-    kotlin("jvm") version "2.1.10" apply false
-    kotlin("plugin.spring") version "2.1.10" apply false
-    kotlin("plugin.jpa") version "2.1.10" apply false
+    kotlin("jvm") version "2.2.0" apply false
+    kotlin("plugin.spring") version "2.2.0" apply false
+    kotlin("plugin.jpa") version "2.2.0" apply false
 }
 
 allprojects {
@@ -23,16 +23,14 @@ subprojects {
     apply(plugin = "io.spring.dependency-management")
 
     java {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(21)
-        }
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
-    // subprojects 내에서는 이 방식으로 코틀린 옵션을 설정합니다.
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions {
-            freeCompilerArgs = listOf("-Xjsr305=strict")
-            jvmTarget = "21"
+        compilerOptions {
+            freeCompilerArgs.addAll("-Xjsr305=strict")
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.fromTarget("21"))
         }
     }
 

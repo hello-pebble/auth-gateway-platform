@@ -15,7 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import java.util.*
 
 @ExtendWith(MockitoExtension::class)
-@DisplayName("UserService ?�위 ?�스??)
+@DisplayName("UserService 단위 테스트")
 class UserServiceTest {
 
     @Mock
@@ -28,20 +28,20 @@ class UserServiceTest {
     private lateinit var userService: UserService
 
     @Test
-    @DisplayName("?�원가???�공_?�로?�사?�자?�??)
+    @DisplayName("회원가입 성공")
     fun signUp_NewUser_ReturnsSavedUser() {
         // given
         val username = "testuser"
         val password = "password123"
         val encodedPassword = "encodedPassword123"
-        val user = User(username, encodedPassword)
+        val user = User(username = username, password = encodedPassword)
 
         given(userRepository.existsByUsernameAndDeletedAtIsNull(username)).willReturn(false)
         given(passwordEncoder.encode(password)).willReturn(encodedPassword)
         given(userRepository.save(any())).willReturn(user)
 
         // when
-        val savedUser = userService.signUp(username, password)
+        val savedUser = userService.signUp(username, null, password)
 
         // then
         assertThat(savedUser).isNotNull
@@ -51,7 +51,7 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("?�원가???�패_중복?�사?�자�?)
+    @DisplayName("회원가입 실패_중복 사용자")
     fun signUp_DuplicateUsername_ThrowsUserException() {
         // given
         val username = "existingUser"
@@ -60,17 +60,17 @@ class UserServiceTest {
         given(userRepository.existsByUsernameAndDeletedAtIsNull(username)).willReturn(true)
 
         // when & then
-        assertThatThrownBy { userService.signUp(username, password) }
+        assertThatThrownBy { userService.signUp(username, null, password) }
             .isInstanceOf(UserException::class.java)
-            .hasMessage("?��? 존재?�는 ?�용?�명?�니??")
+            .hasMessage("이미 존재하는 사용자명입니다.")
     }
 
     @Test
-    @DisplayName("?�용?�조???�공_?�용?�반??)
+    @DisplayName("사용자조회 성공")
     fun findByUsername_ExistingUser_ReturnsUser() {
         // given
         val username = "testuser"
-        val user = User(username, "password")
+        val user = User(username = username, password = "password")
         given(userRepository.findByUsernameAndDeletedAtIsNull(username)).willReturn(Optional.of(user))
 
         // when
@@ -82,7 +82,7 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("?�용?�조???�패_존재?��??�는?�용??)
+    @DisplayName("사용자조회 실패_존재하지 않는 사용자")
     fun findByUsername_NonExistingUser_ThrowsUserException() {
         // given
         val username = "nonExistent"
@@ -91,6 +91,47 @@ class UserServiceTest {
         // when & then
         assertThatThrownBy { userService.findByUsername(username) }
             .isInstanceOf(UserException::class.java)
-            .hasMessage("?�용?��? 찾을 ???�습?�다.")
+            .hasMessageContaining("사용자를 찾을 수 없습니다")
+    }
+
+    @Test
+    @DisplayName("비밀번호 변경 성공")
+    fun changePassword_Success() {
+        // given
+        val username = "testuser"
+        val oldPassword = "oldPassword"
+        val newPassword = "newPassword"
+        val encodedOldPassword = "encodedOldPassword"
+        val encodedNewPassword = "encodedNewPassword"
+        val user = User(username = username, password = encodedOldPassword)
+
+        given(userRepository.findByUsernameAndDeletedAtIsNull(username)).willReturn(Optional.of(user))
+        given(passwordEncoder.matches(oldPassword, encodedOldPassword)).willReturn(true)
+        given(passwordEncoder.encode(newPassword)).willReturn(encodedNewPassword)
+
+        // when
+        userService.changePassword(username, oldPassword, newPassword)
+
+        // then
+        verify(userRepository).save(any())
+    }
+
+    @Test
+    @DisplayName("비밀번호 변경 실패_기존 비밀번호 불일치")
+    fun changePassword_WrongOldPassword_ThrowsUserException() {
+        // given
+        val username = "testuser"
+        val oldPassword = "wrongPassword"
+        val newPassword = "newPassword"
+        val encodedOldPassword = "encodedOldPassword"
+        val user = User(username = username, password = encodedOldPassword)
+
+        given(userRepository.findByUsernameAndDeletedAtIsNull(username)).willReturn(Optional.of(user))
+        given(passwordEncoder.matches(oldPassword, encodedOldPassword)).willReturn(false)
+
+        // when & then
+        assertThatThrownBy { userService.changePassword(username, oldPassword, newPassword) }
+            .isInstanceOf(UserException::class.java)
+            .hasMessage("기존 비밀번호가 일치하지 않습니다.")
     }
 }

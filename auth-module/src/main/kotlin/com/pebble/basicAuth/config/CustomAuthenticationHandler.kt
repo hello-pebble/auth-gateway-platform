@@ -21,9 +21,17 @@ class CustomAuthenticationHandler(
         response: HttpServletResponse,
         authException: AuthenticationException
     ) {
-        response.status = HttpServletResponse.SC_UNAUTHORIZED
-        response.contentType = "application/json;charset=UTF-8"
-        response.writer.write("{\"message\":\"인증이 필요합니다.\"}")
+        val accept = request.getHeader("Accept")
+        
+        // 브라우저의 HTML 요청인 경우 로그인 페이지로 리다이렉트
+        if (accept != null && accept.contains("text/html")) {
+            response.sendRedirect("/login.html")
+        } else {
+            // API 요청인 경우 기존처럼 JSON 응답
+            response.status = HttpServletResponse.SC_UNAUTHORIZED
+            response.contentType = "application/json;charset=UTF-8"
+            response.writer.write("{\"message\":\"인증이 필요합니다.\"}")
+        }
     }
 
     @Throws(IOException::class)
@@ -32,7 +40,6 @@ class CustomAuthenticationHandler(
         response: HttpServletResponse,
         authentication: Authentication?
     ) {
-        // [Phase 2-2] 로그아웃 시 Redis에서 Refresh Token 삭제
         if (authentication != null && authentication.name != null) {
             refreshTokenRepository.deleteByUsername(authentication.name)
         }

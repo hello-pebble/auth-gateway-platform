@@ -1,6 +1,5 @@
-package com.pebble.basicAuth.config.oauth2
+package com.pebble.basicAuth.config
 
-import com.pebble.basicAuth.config.JwtProvider
 import com.pebble.basicAuth.persistence.RefreshTokenRepository
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
@@ -9,33 +8,30 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.core.Authentication
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler
 import org.springframework.stereotype.Component
-import java.io.IOException
 
 @Component
-class OAuth2SuccessHandler(
+class FormLoginSuccessHandler(
     private val jwtProvider: JwtProvider,
     private val refreshTokenRepository: RefreshTokenRepository,
     @Value("\${auth.cookie.secure:true}") private val secureCookie: Boolean,
     @Value("\${auth.gateway-url}") private val gatewayUrl: String,
     @Value("\${auth.redirect-path}") private val redirectPath: String
-) : SimpleUrlAuthenticationSuccessHandler() {
+) : SimpleUrlAuthenticationSuccessHandler("/") {
 
-    @Throws(IOException::class)
     override fun onAuthenticationSuccess(
         request: HttpServletRequest,
         response: HttpServletResponse,
         authentication: Authentication
     ) {
-        val oAuth2User = authentication.principal as CustomOAuth2User
-        val username = oAuth2User.user.username
-        val role = oAuth2User.user.role.name
+        val username = authentication.name
+        val role = authentication.authorities.firstOrNull()?.authority ?: "ROLE_USER"
 
-        val accessToken = jwtProvider.createAccessToken(username, role)
+        val accessToken  = jwtProvider.createAccessToken(username, role)
         val refreshToken = jwtProvider.createRefreshToken(username)
 
         refreshTokenRepository.save(username, refreshToken, jwtProvider.refreshExpiration)
 
-        addCookie(response, "accessToken", accessToken, (jwtProvider.accessExpiration / 1000).toInt())
+        addCookie(response, "accessToken",  accessToken,  (jwtProvider.accessExpiration  / 1000).toInt())
         addCookie(response, "refreshToken", refreshToken, (jwtProvider.refreshExpiration / 1000).toInt())
 
         redirectStrategy.sendRedirect(request, response, "$gatewayUrl$redirectPath")
@@ -45,9 +41,9 @@ class OAuth2SuccessHandler(
 
     private fun addCookie(response: HttpServletResponse, name: String, value: String, maxAge: Int) {
         val cookie = Cookie(name, value).apply {
-            path = "/"
+            path     = "/"
             isHttpOnly = true
-            secure = secureCookie
+            secure   = secureCookie
             this.maxAge = maxAge
         }
         response.addCookie(cookie)

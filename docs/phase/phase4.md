@@ -74,6 +74,45 @@
 | 데이터 관리  | 요청 상태 관리 및 정렬 필요                 | 정렬 구조      | Set     | 정렬 불가       |
 | 최종 요구사항 | **대기 + 시간 기반 제어 + 정렬**           | 모두 필요      | ZSET    | ✅ 충족        |
 
+#### 4-6. 커스텀 인증 UI 구현 (Custom Auth UI)
+
+Spring Security 기본 제공 로그인 화면을 제거하고 서비스 전용 UI로 교체하였습니다.
+
+| 항목 | 세부 내용 | 상태 |
+| :--- | :--- | :---: |
+| **커스텀 로그인 페이지** | `/login.html` — formLogin + oauth2Login 모두 동일 페이지 사용 | ✅ |
+| **커스텀 회원가입 페이지** | `/signup.html` — `POST /api/v1/users/signup` 비동기 호출 | ✅ |
+| **Google OAuth2 버튼** | `/oauth2/authorization/google` 연동, 로그인 페이지 내 소셜 버튼 | ✅ |
+| **로그인 실패 안내** | `?error` 파라미터 감지 → 실패 안내 박스 노출 (`FormLoginFailureHandler`) | ✅ |
+| **DefaultLoginPageGeneratingFilter 비활성화** | `oauth2Login.loginPage("/login.html")` 명시로 Spring 기본 필터 제거 | ✅ |
+
+**핵심 결정**: `formLogin`과 `oauth2Login` 양쪽 모두 `.loginPage("/login.html")`을 명시하지 않으면 `DefaultLoginPageGeneratingFilter`가 살아남아 Spring 기본 화면이 우선 적용됩니다.
+
+#### 4-7. MSA 게이트웨이 인증 연동 강화
+
+| 항목 | 세부 내용 | 상태 |
+| :--- | :--- | :---: |
+| **CookieToAuthorizationFilter** | 게이트웨이에서 `accessToken` 쿠키 → `Authorization: Bearer` 헤더 변환 | ✅ |
+| **대시보드 인증 상태** | `GET /api/v1/users/me` 응답으로 로그인 여부 판별, 로그아웃 버튼 활성화 | ✅ |
+| **JWT HttpOnly 쿠키** | `FormLoginSuccessHandler` · `OAuth2SuccessHandler` — `accessToken` / `refreshToken` 쿠키 발급 | ✅ |
+| **포트 마스킹** | `RewriteLocationResponseHeader=AS_IN_REQUEST` 게이트웨이 필터로 내부 포트(8080) 노출 차단 | 🔄 |
+| **forward-headers-strategy** | `framework` 설정으로 프록시 헤더(`X-Forwarded-*`) 정상 처리 | ✅ |
+
+#### 4-8. Render 배포 준비 (환경변수 분리)
+
+| 환경변수 | 용도 | 기본값 (로컬) |
+| :--- | :--- | :--- |
+| `GATEWAY_URL` | 로그인 성공 후 리다이렉트 기준 URL | `http://localhost:8000` |
+| `REDIRECT_PATH` | 로그인 성공 후 이동 경로 | `/me` |
+| `OAUTH2_CLIENT_SECRET` | OAuth2 클라이언트 시크릿 | `{noop}secret` |
+| `OAUTH2_REDIRECT_URI` | OAuth2 인가 코드 콜백 URI | `http://127.0.0.1:8080/...` |
+| `GOOGLE_CLIENT_ID` | Google OAuth2 클라이언트 ID | `dummy` |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth2 클라이언트 시크릿 | `dummy` |
+| `JWT_SECRET` | JWT 서명 키 | 로컬 기본값 |
+| `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` | 데이터베이스 연결 정보 | 로컬 PostgreSQL |
+
+**분리 원칙**: 모든 민감 정보 및 환경 종속 URL을 `@Value("${KEY:default}")` 패턴으로 주입. `application-dev.yaml`에서 `auth.cookie.secure: false`를 설정하여 로컬 HTTP 환경에서도 쿠키 동작 보장.
+
 ---
 ### 🔗 연관 자료
 

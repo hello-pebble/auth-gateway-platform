@@ -11,56 +11,67 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher
 
 @Configuration
-/**
- * [권한 ?�스???�입 - Step 3]
- * [Phase 2-3] Stateless ?�증 체계�??�환?�니??
- */
 @EnableMethodSecurity
 class SecurityConfig(
     private val authenticationHandler: CustomAuthenticationHandler,
     private val jwtAuthenticationFilter: JwtAuthenticationFilter,
-    private val rateLimitFilter: RateLimitFilter,
     private val customOAuth2UserService: CustomOAuth2UserService,
-    private val oAuth2SuccessHandler: OAuth2SuccessHandler
+    private val oAuth2SuccessHandler: OAuth2SuccessHandler,
+    private val formLoginSuccessHandler: FormLoginSuccessHandler,
+    private val formLoginFailureHandler: FormLoginFailureHandler
 ) {
 
     @Bean
     @Throws(Exception::class)
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
-            // [Phase 2-3] REST API 기반?��?�?CSRF �?기본 로그???��? ?�용?��? ?�습?�다.
-            .csrf { it.disable() }
-            .formLogin { it.disable() }
-            .httpBasic { it.disable() }
-
-            // [Phase 2-3] 모든 ?�션 관리�? Stateless�??�정 (JSESSIONID ?�성 방�?)
+            .csrf { it.disable() } // 테스트 편의를 위해 CSRF 비활성화
+            
+            // 1. 세션 정책: 인증 서버는 로그인 과정을 위해 세션이 필요함 (IF_REQUIRED)
             .sessionManagement { session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
             }
 
             .authorizeHttpRequests { auth ->
-                auth.requestMatchers("/api/v1/users/signup", "/api/v1/login", "/api/v1/refresh").permitAll()
+                auth.requestMatchers("/", "/index.html", "/static/**", "/css/**", "/js/**", "/favicon.ico").permitAll()
+                    .requestMatchers("/login", "/signup", "/login.html", "/signup.html", "/api/v1/users/signup", "/api/v1/login", "/api/v1/refresh").permitAll()
+                    .requestMatchers("/api/tasks/access-info").permitAll()
                     .requestMatchers("/h2-console/**").permitAll()
-                    .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                    .requestMatchers("/actuator/health").permitAll()
                     .anyRequest().authenticated()
             }
 
-            // [Phase 2-3] JWT ?�터�?UsernamePasswordAuthenticationFilter ?�에 배치
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
-            .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter::class.java)
+
+            // 2. 커스텀 로그인 폼 활성화
+            .formLogin { form ->
+                form.loginPage("/login.html")
+                    .loginProcessingUrl("/login")
+                    .successHandler(formLoginSuccessHandler)
+                    .failureHandler(formLoginFailureHandler)
+                    .permitAll()
+            }
 
             .oauth2Login { oauth2 ->
-                oauth2.userInfoEndpoint { userInfo -> userInfo.userService(customOAuth2UserService) }
+                oauth2.loginPage("/login.html")
+                    .userInfoEndpoint { userInfo -> userInfo.userService(customOAuth2UserService) }
                     .successHandler(oAuth2SuccessHandler)
             }
 
+            // 3. 예외 처리: API 요청에 대해서만 커스텀 핸들러(JSON) 적용
             .exceptionHandling { exception ->
-                exception.authenticationEntryPoint(authenticationHandler)
+                exception.defaultAuthenticationEntryPointFor(
+                    authenticationHandler,
+                    AntPathRequestMatcher("/api/**")
+                )
             }
+            
             .logout { logout ->
                 logout.logoutUrl("/api/v1/logout")
+                    .deleteCookies("accessToken", "refreshToken")
                     .logoutSuccessHandler(authenticationHandler)
             }
             .headers { headers -> headers.frameOptions { it.disable() } }

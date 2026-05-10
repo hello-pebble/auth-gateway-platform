@@ -20,26 +20,36 @@ class TestDataLoader(
 
     @Bean
     fun initData() = CommandLineRunner {
-        // 1. 일반 사용자 생성 (없을 경우에만)
-        if (!userRepository.existsByUsernameAndDeletedAtIsNull("user")) {
-            userService.signUp("user", "user@example.com", "password123")
-            println(">>> Test User Created: user / password123")
+        // 관리자
+        if (!userRepository.existsByUsernameAndDeletedAtIsNull("admin")) {
+            userRepository.save(User(
+                id = null, username = "admin", email = "admin@example.com",
+                password = passwordEncoder.encode("password123"),
+                provider = null, providerId = null,
+                role = UserRole.ROLE_ADMIN, deletedAt = null
+            ))
         }
 
-        // 2. 관리자 사용자 생성 (없을 경우에만)
-        if (!userRepository.existsByUsernameAndDeletedAtIsNull("admin")) {
-            val encodedPassword = passwordEncoder.encode("password123")
-            userRepository.save(User(
-                id = null,
-                username = "admin",
-                email = "admin@example.com",
-                password = encodedPassword,
-                provider = null,
-                providerId = null,
-                role = UserRole.ROLE_ADMIN,
-                deletedAt = null
-            ))
-            println(">>> Test Admin Created: admin / password123")
+        // 일반 회원 10명
+        val members = listOf(
+            Triple("user",    "user@example.com",    "password123"),
+            Triple("alice",   "alice@example.com",   "password123"),
+            Triple("bob",     "bob@example.com",     "password123"),
+            Triple("charlie", "charlie@example.com", "password123"),
+            Triple("diana",   "diana@example.com",   "password123"),
+            Triple("evan",    "evan@example.com",    "password123"),
+            Triple("fiona",   "fiona@example.com",   "password123"),
+            Triple("grace",   "grace@example.com",   "password123"),
+            Triple("henry",   "henry@example.com",   "password123"),
+            Triple("irene",   "irene@example.com",   "password123"),
+            Triple("james",   "james@example.com",   "password123"),
+        )
+        members.forEach { (username, email, pw) ->
+            if (!userRepository.existsByUsernameAndDeletedAtIsNull(username)) {
+                userService.signUp(username, email, pw)
+            }
         }
+
+        println(">>> Auth Module Test Data Initialized (admin + 10 members)")
     }
 }

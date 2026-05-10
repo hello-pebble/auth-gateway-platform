@@ -16,6 +16,7 @@ class GatewaySecurityConfig {
             .csrf { it.disable() }
             .authorizeExchange { exchange ->
                 exchange
+                    .pathMatchers("/actuator/**").permitAll()
                     .anyExchange().permitAll() // 테스트를 위해 게이트웨이 보안 해제
             }
             .build()

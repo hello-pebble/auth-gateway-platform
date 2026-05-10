@@ -2,7 +2,7 @@
 FROM eclipse-temurin:21-jdk-jammy AS build
 WORKDIR /app
 COPY . .
-RUN ./gradlew :gateway-service:bootJar --no-daemon
+RUN chmod +x ./gradlew && ./gradlew :gateway-service:bootJar --no-daemon
 
 # Run Stage
 FROM eclipse-temurin:21-jre-jammy

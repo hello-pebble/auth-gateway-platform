@@ -1,28 +1,65 @@
 server:
-  port: 8000
+  port: ${PORT}
+  address: 0.0.0.0
 
 spring:
   application:
     name: gateway-service
   cloud:
     gateway:
+      default-filters:
+        - RewriteLocationResponseHeader=AS_IN_REQUEST, Location, .*
       routes:
-        - id: auth-route
-          uri: http://localhost:8080
+        # 1. PUBLIC: Auth Service
+        - id: public-access-route
+          uri: ${AUTH_SERVICE_URL}
+          order: -1
           predicates:
-            - Path=/auth/**
+            - Path=/login.html, /signup.html, /login, /signup, /favicon.ico, /api/v1/login, /api/v1/users/signup, /api/v1/users/me, /api/v1/logout, /api/v1/refresh, /api/tasks/access-info
+
+        # Auth: /me 페이지 → auth 모듈 index.html
+        - id: me-page
+          uri: ${AUTH_SERVICE_URL}
+          predicates:
+            - Path=/me, /me/
           filters:
-            - RewritePath=/auth/(?<segment>.*), /${segment}
-        - id: matching-route
-          uri: http://localhost:8081
+            - RewritePath=/me/?, /index.html
+
+
+        # 2. PRIVATE: Task Service
+        - id: private-task-route
+          uri: ${TASK_SERVICE_URL}
           predicates:
-            - Path=/api/matching/**
-        - id: task-route
-          uri: http://localhost:8082
+            - Path=/api/v1/tasks/**, /api/v1/dates/**, /tasks/**
+
+        # 3. PUBLIC: Preview Service
+        - id: public-preview-route
+          uri: ${PREVIEW_SERVICE_URL}
           predicates:
-            - Path=/api/tasks/**, /api/dates/**
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8080
+            - Path=/api/v1/preview/**, /preview/**
+
+        # 4. PRIVATE: Matching Service
+        - id: private-matching-route
+          uri: ${MATCHING_SERVICE_URL}
+          predicates:
+            - Path=/api/v1/matching/**, /matching/**
+
+        # 5. PRIVATE: Admin Service (ROLE_ADMIN JWT 필요)
+        - id: private-admin-route
+          uri: ${ADMIN_SERVICE_URL}
+          predicates:
+            - Path=/api/v1/admin/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    org.springframework.cloud.gateway: TRACE
+    org.springframework.http.server.reactive: DEBUG

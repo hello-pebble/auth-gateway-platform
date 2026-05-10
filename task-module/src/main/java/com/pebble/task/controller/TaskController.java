@@ -40,4 +40,35 @@ public class TaskController {
         taskService.deleteTask(taskId, jwt.getSubject());
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/access-info")
+    public ResponseEntity<java.util.Map<String, Object>> getAccessInfo(
+            @RequestHeader java.util.Map<String, String> headers,
+            @AuthenticationPrincipal Jwt jwt) {
+        
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        response.put("service", "Task Service");
+        
+        java.util.Map<String, Object> accessInfo = new java.util.HashMap<>();
+        accessInfo.put("viaGateway", headers.containsKey("x-forwarded-host"));
+        accessInfo.put("gatewayHeaders", headers.entrySet().stream()
+                .filter(e -> e.getKey().startsWith("x-"))
+                .collect(java.util.stream.Collectors.toMap(java.util.Map.Entry::getKey, java.util.Map.Entry::getValue)));
+        
+        java.util.Map<String, Object> authInfo = new java.util.HashMap<>();
+        if (jwt != null) {
+            authInfo.put("authenticated", true);
+            authInfo.put("subject", jwt.getSubject());
+            authInfo.put("claims", jwt.getClaims());
+            authInfo.put("token_preview", jwt.getTokenValue().substring(0, 15) + "...");
+        } else {
+            authInfo.put("authenticated", false);
+        }
+        
+        response.put("accessInfo", accessInfo);
+        response.put("authInfo", authInfo);
+        response.put("tasks", taskService.getMyTasks(jwt != null ? jwt.getSubject() : "anonymous"));
+        
+        return ResponseEntity.ok(response);
+    }
 }

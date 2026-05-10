@@ -1,23 +1,27 @@
 server:
-  port: 8082
+  port: ${PORT:8083}
 
 spring:
   application:
-    name: task-module
+    name: task-service
+
   datasource:
-    url: jdbc:h2:mem:taskdb;DB_CLOSE_DELAY=-1
+    url: ${DB_URL:jdbc:h2:mem:taskdb}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
     driver-class-name: org.h2.Driver
-    username: sa
-    password: 
-  h2:
-    console:
-      enabled: true
+
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
+
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8080
+          jwk-set-uri: ${JWK_SET_URI:http://localhost:8080/oauth2/jwks}
+
+logging:
+  level:
+    com.pebble.task: DEBUG

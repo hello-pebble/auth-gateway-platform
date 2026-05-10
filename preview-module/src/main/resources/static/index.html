@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Preview Service - 무인증 리스트</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; background-color: #f4f7f6; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .info-box { background: #e8f4fd; border-left: 5px solid #3498db; padding: 15px; margin-bottom: 20px; }
+        .json-viewer { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: monospace; font-size: 0.9em; white-space: pre-wrap; }
+        .item-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
+        .item-card h3 { margin: 0 0 5px 0; color: #2980b9; }
+        .badge { background: #27ae60; color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; }
+        .back-btn { font-size: 0.85rem; color: #6366f1; text-decoration: none; padding: 6px 14px; border: 1px solid #6366f1; border-radius: 6px; }
+        .back-btn:hover { background: #6366f1; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Preview Service <span class="badge">No-Auth</span>
+            <a href="/" class="back-btn">← 포털</a></h1>
+
+        
+        <div class="info-box">
+            <strong>Gateway Access Status:</strong>
+            <p id="gateway-status">데이터를 불러오는 중...</p>
+        </div>
+
+        <h3>Raw JSON Response (Gateway Info Included)</h3>
+        <div id="json-output" class="json-viewer">{}</div>
+
+        <h3>Preview Content List</h3>
+        <div id="item-list"></div>
+    </div>
+
+    <script>
+        async function fetchPreview() {
+            try {
+                const response = await fetch('/api/v1/preview');
+
+                if (!response.ok) {
+                    document.getElementById('gateway-status').textContent = `오류: 서버 응답 ${response.status}`;
+                    return;
+                }
+
+                const result = await response.json();
+
+                document.getElementById('json-output').textContent = JSON.stringify(result, null, 2);
+
+                const viaGateway = result.accessInfo?.viaGateway;
+                document.getElementById('gateway-status').innerHTML = viaGateway
+                    ? "✅ 게이트웨이를 통해 안전하게 무인증 접근되었습니다."
+                    : "⚠️ 게이트웨이를 거치지 않고 직접 접근되었습니다.";
+
+                const items = result.data ?? [];
+                const listContainer = document.getElementById('item-list');
+                if (items.length > 0) {
+                    listContainer.innerHTML = items.map(item => `
+                        <div class="item-card">
+                            <h3>${item.title}</h3>
+                            <p>${item.description}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    listContainer.textContent = '표시할 콘텐츠가 없습니다.';
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('gateway-status').textContent = "오류 발생: " + error.message;
+            }
+        }
+
+        fetchPreview();
+    </script>
+</body>
+</html>

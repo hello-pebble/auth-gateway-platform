@@ -1,167 +1,281 @@
-### 🚀 프로젝트 로드맵
-```mermaid
-graph LR
-    %% 단계 정의
-    Step1(<b>Phase 1. 문제 정의</b><br/>운영 비효율 진단<br/>아키텍처 설계)
-    Step2(<b>Phase 2. 엔진 구축</b><br/>Auth Server 구현<br/>보안 프로토콜 적용)
-    Step3(<b>Phase 3. 통합</b><br/>SSO 통합 검증<br/>관리자 반복로그인 제거)
-    Step3.5(<b>Phase 3.5. 운영 최적화</b><br/>임계치 도달<br/>인증 안정성 확보)
-    Step4(<b>Phase 4. 비즈니스 확장</b><br/>MSA 대시보드 구축<br/>Sec 7.0 마이그레이션)
-    Step5(<b>Phase 5. 클라우드 배포</b><br/>Render 배포<br/>운영 환경 구성)
+<div align="center">
 
-    %% 흐름 연결
-    Step1 --> Step2
-    Step2 -->Step3
-    Step3 -->Step3.5
-    Step3.5 -->Step4
-    Step4 -->Step5
+# ⚙️ OAuth2 Authorization · MSA Engineering Portfolio
 
-    %% 스타일링
-    style Step1 fill:#ffffff,color:#000000,stroke:#455a64,stroke-width:2px
-    style Step2 fill:#ffffff,color:#000000,stroke:#455a64,stroke-width:2px
-    style Step3 fill:#ffffff,color:#000000,stroke:#455a64,stroke-width:2px
-    style Step3.5 fill:#ffffff,color:#000000,stroke:#455a64,stroke-width:2px
-    style Step4 fill:#ffffff,color:#000000,stroke:#455a64,stroke-width:2px
-    style Step5 fill:#ffffff,color:#000000,stroke:#f57c00,stroke-width:2px
+**Spring Boot 3.5 기반 인증 서버부터 관리자 시스템까지 — 점진적으로 구축한 실전 MSA 포트폴리오**
 
-    %% 하단 주석 대신 방향성 표시
-    classDef default font-family:Arial,font-size:13px;
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.2.0-7F52FF?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5.3-6DB33F?style=flat-square&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Spring Security](https://img.shields.io/badge/Spring_Security-OAuth2-6DB33F?style=flat-square&logo=springsecurity&logoColor=white)](https://spring.io/projects/spring-security)
+[![Java](https://img.shields.io/badge/Java-21-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://openjdk.org/)
 
-    %% 클릭 이벤트 추가
-    click Step1 "./docs/phase/phase1.md"
-    click Step2 "./docs/phase/phase2.md"
-    click Step3 "./docs/phase/phase3.md"
-    click Step3.5 "./docs/phase/phase3_5.md"
-    click Step4 "./docs/phase/phase4.md"
-```
+</div>
+
 ---
 
-### 🌐 통합 포털 아키텍처
+## 🎯 프로젝트 목표
+
+파편화된 서비스들의 인증 체계를 **OAuth2 기반 중앙 인증 서버**로 통합하고,  
+실전 MSA 아키텍처 — Gateway, 매칭 엔진, 관리자 시스템 — 를 직접 설계·구현한 엔지니어링 포트폴리오.
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1e293b', 'primaryTextColor': '#f1f5f9', 'lineColor': '#64748b', 'secondaryColor': '#0f172a', 'tertiaryColor': '#1e293b', 'edgeLabelBackground': '#1e293b', 'clusterBkg': '#0f172a', 'clusterBorder': '#334155', 'titleColor': '#f1f5f9'}}}%%
+graph LR
+    subgraph Before["❌ Before · 파편화된 인증"]
+        direction TB
+        P1[서비스 A] --- DB1[(회원 DB)]
+        P2[서비스 B] --- DB2[(회원 DB)]
+        ADM((관리자)) -.->|중복 로그인| P1
+        ADM -.->|중복 로그인| P2
+    end
+
+    subgraph After["✅ After · 통합 MSA 생태계"]
+        direction TB
+        GW[🌐 Gateway] --> AS[🔐 Auth Server]
+        GW --> SVC1[📋 Task]
+        GW --> SVC2[💘 Matching]
+        GW --> SVC3[🛡️ Admin]
+        AS -.->|JWKS| SVC1
+        AS -.->|JWKS| SVC2
+        AS -.->|JWKS| SVC3
+        ADMIN((관리자)) ==>|SSO| GW
+    end
+
+    Before -->|"인증 통합\n표준화\n관리 자동화"| After
+
+    style Before fill:#1e293b,color:#94a3b8,stroke:#334155
+    style After fill:#1e293b,color:#f1f5f9,stroke:#334155
+    style GW fill:#3b82f6,color:#fff,stroke:#1d4ed8
+    style AS fill:#f59e0b,color:#fff,stroke:#d97706
+    style SVC1 fill:#10b981,color:#fff,stroke:#059669
+    style SVC2 fill:#8b5cf6,color:#fff,stroke:#7c3aed
+    style SVC3 fill:#ef4444,color:#fff,stroke:#dc2626
+```
+
+---
+
+## 🔨 하네스 엔지니어링 여정
+
+> 기능을 하나씩 추가하며 전체 시스템을 점진적으로 완성한 실제 개발 흐름.
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1e293b', 'primaryTextColor': '#f1f5f9', 'lineColor': '#475569', 'secondaryColor': '#0f172a', 'tertiaryColor': '#1e293b', 'clusterBkg': '#0f172a', 'clusterBorder': '#1e293b', 'titleColor': '#f1f5f9', 'nodeBorder': '#334155', 'mainBkg': '#1e293b'}}}%%
+flowchart LR
+    subgraph L1["① 인증 기반"]
+        A1["🔐 OAuth2 AS\nJWT 발급·RTR"]
+        A2["👤 사용자 도메인\n회원가입·로그인\n비밀번호 변경"]
+    end
+
+    subgraph L2["② 인프라"]
+        B1["🌐 Gateway\n쿠키→Bearer 변환\n서비스 라우팅"]
+        B2["🚦 트래픽 제어\nRate Limit\n대기열(Waiting Room)"]
+    end
+
+    subgraph L3["③ 서비스 확장"]
+        C1["📊 MSA Dashboard\nSecurity 7.0 마이그레이션\nHealth Check"]
+        C2["📋 Task Service\n👁 Preview Service"]
+    end
+
+    subgraph L4["④ 도메인 & 관리"]
+        D1["💘 매칭 엔진\n노출·순위·상호매칭\n인메모리 ConcurrentHashMap"]
+        D2["🛡️ 관리자 시스템\nROLE_ADMIN JWT\n차단·통계·RestClient"]
+    end
+
+    L1 -->|"JWKS 제공\nJWT 검증 기반 확보"| L2
+    L2 -->|"라우팅 규칙\n쿠키 필터 적용"| L3
+    L3 -->|"서비스 구조 안정화"| L4
+
+    style L1 fill:#0f172a,color:#f1f5f9,stroke:#f59e0b,stroke-width:2px
+    style L2 fill:#0f172a,color:#f1f5f9,stroke:#3b82f6,stroke-width:2px
+    style L3 fill:#0f172a,color:#f1f5f9,stroke:#10b981,stroke-width:2px
+    style L4 fill:#0f172a,color:#f1f5f9,stroke:#ef4444,stroke-width:2px
+    style A1 fill:#1e293b,color:#fcd34d,stroke:#f59e0b
+    style A2 fill:#1e293b,color:#fcd34d,stroke:#f59e0b
+    style B1 fill:#1e293b,color:#93c5fd,stroke:#3b82f6
+    style B2 fill:#1e293b,color:#93c5fd,stroke:#3b82f6
+    style C1 fill:#1e293b,color:#6ee7b7,stroke:#10b981
+    style C2 fill:#1e293b,color:#6ee7b7,stroke:#10b981
+    style D1 fill:#1e293b,color:#c4b5fd,stroke:#8b5cf6
+    style D2 fill:#1e293b,color:#fca5a5,stroke:#ef4444
+```
+
+---
+
+## 🚀 개발 로드맵
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1e293b', 'primaryTextColor': '#f1f5f9', 'lineColor': '#475569', 'edgeLabelBackground': '#0f172a'}}}%%
+graph LR
+    P1("<b>Phase 1</b><br/>문제 정의<br/>아키텍처 설계")
+    P2("<b>Phase 2</b><br/>Auth Server 구현<br/>보안 프로토콜 적용")
+    P3("<b>Phase 3</b><br/>SSO 통합<br/>반복 로그인 제거")
+    P35("<b>Phase 3.5</b><br/>트래픽 제어<br/>인증 안정성 확보")
+    P4("<b>Phase 4</b><br/>MSA Dashboard<br/>Security 7.0 마이그레이션")
+    P5("<b>Phase 5</b><br/>Render 클라우드<br/>배포 환경 구성")
+    P6("<b>Phase 6 ★</b><br/>매칭 엔진<br/>관리자 시스템")
+
+    P1 --> P2 --> P3 --> P35 --> P4 --> P5 --> P6
+
+    style P1  fill:#1e293b,color:#94a3b8,stroke:#334155,stroke-width:2px
+    style P2  fill:#1e293b,color:#94a3b8,stroke:#334155,stroke-width:2px
+    style P3  fill:#1e293b,color:#94a3b8,stroke:#334155,stroke-width:2px
+    style P35 fill:#1e293b,color:#94a3b8,stroke:#334155,stroke-width:2px
+    style P4  fill:#1e293b,color:#94a3b8,stroke:#334155,stroke-width:2px
+    style P5  fill:#1e293b,color:#94a3b8,stroke:#334155,stroke-width:2px
+    style P6  fill:#ef4444,color:#ffffff,stroke:#dc2626,stroke-width:3px
+
+    click P1 "./docs/phase/phase1.md"
+    click P2 "./docs/phase/phase2.md"
+    click P3 "./docs/phase/phase3.md"
+    click P35 "./docs/phase/phase3_5.md"
+    click P4 "./docs/phase/phase4.md"
+```
+
+---
+
+## 🌐 시스템 아키텍처
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1e293b', 'primaryTextColor': '#f1f5f9', 'lineColor': '#475569', 'clusterBkg': '#0f172a', 'clusterBorder': '#334155', 'titleColor': '#f1f5f9'}}}%%
 graph TD
-    User((User)) --> Gateway[<b>Smart Gateway</b><br/>Central Hub & Routing]
-    
-    subgraph Portal [MSA Hub Dashboard]
-        Gateway --> Hub[Portal Home /]
+    Client(("👤 Client"))
+
+    subgraph GW_ZONE["Gateway Layer · :8082"]
+        GW["🌐 Spring Cloud Gateway<br/><small>쿠키→Bearer 변환 · 라우팅</small>"]
     end
 
-    subgraph Services [Back-end Ecosystem]
-        Gateway -->|Public| Preview[Preview Service<br/>Port 8084]
-        Gateway -->|Private| Auth[Auth Server<br/>Port 8080]
-        Gateway -->|Private| Task[Task Service<br/>Port 8083]
-        Gateway -->|Private| Match[Matching Service<br/>Port 8081]
+    subgraph SERVICES["Service Layer"]
+        AUTH["🔐 auth-module<br/><small>:8080 · OAuth2 AS · JWT 발급</small>"]
+        MATCH["💘 matching-module<br/><small>:8081 · 매칭 엔진 · 내부 Admin API</small>"]
+        ADMIN["🛡️ admin-module<br/><small>:8085 · ROLE_ADMIN · 통계</small>"]
+        TASK["📋 task-module<br/><small>:8083 · CRUD · Java/Kotlin 혼용</small>"]
+        PREVIEW["👁 preview-module<br/><small>:8084 · 플레이스홀더</small>"]
     end
 
-    Auth -.->|JWK Set| Task
-    Auth -.->|JWK Set| Match
-    
-    style Gateway fill:#f9f,stroke:#333,stroke-width:4px
-    style Hub fill:#e1f5fe,stroke:#01579b
-    style Auth fill:#fff9c4,stroke:#fbc02d
+    subgraph SECURITY["Security · JWKS"]
+        JWKS["/oauth2/jwks<br/><small>공개키 제공</small>"]
+    end
+
+    Client --> GW
+    GW -->|"/login /signup"| AUTH
+    GW -->|"/api/v1/matching/**"| MATCH
+    GW -->|"/api/v1/admin/**"| ADMIN
+    GW -->|"/api/v1/tasks/**"| TASK
+    GW -->|"/api/v1/preview/**"| PREVIEW
+
+    ADMIN -->|"JWT 포워딩<br/>/internal/admin/**<br/><small>게이트웨이 우회</small>"| MATCH
+
+    AUTH --> JWKS
+    JWKS -.->|"토큰 검증"| MATCH
+    JWKS -.->|"토큰 검증"| ADMIN
+    JWKS -.->|"토큰 검증"| TASK
+
+    style GW    fill:#3b82f6,color:#fff,stroke:#1d4ed8,stroke-width:2px
+    style AUTH  fill:#f59e0b,color:#fff,stroke:#d97706,stroke-width:2px
+    style MATCH fill:#8b5cf6,color:#fff,stroke:#7c3aed,stroke-width:2px
+    style ADMIN fill:#ef4444,color:#fff,stroke:#dc2626,stroke-width:2px
+    style TASK  fill:#10b981,color:#fff,stroke:#059669,stroke-width:2px
+    style PREVIEW fill:#475569,color:#fff,stroke:#334155,stroke-width:2px
+    style JWKS  fill:#1e293b,color:#94a3b8,stroke:#334155,stroke-dasharray:5 5
+    style GW_ZONE fill:#0f172a,color:#f1f5f9,stroke:#1d4ed8
+    style SERVICES fill:#0f172a,color:#f1f5f9,stroke:#334155
+    style SECURITY fill:#0f172a,color:#f1f5f9,stroke:#334155,stroke-dasharray:5 5
 ```
 
----
-### 🧾 프로젝트 목표
-```mermaid
-graph LR
-%% 1. 과거 상태 (Legacy)
-    subgraph Legacy [Before: 파편화된 서비스]
-        direction TB
-        P1[프로젝트 A] --- DB1[(회원DB)]
-        P2[프로젝트 B] --- DB2[(회원DB)]
-        Admin1((관리자)) -.->|중복 로그인/관리| P1
-        Admin1 -.->|중복 로그인/관리| P2
-    end
+### 요청 흐름 요약
 
-%% 2. 현재 구축 단계 (Implementation)
-    subgraph Current [Current: 통합 프로세스 구축]
-        direction TB
-        S1[<b>1. 인증 통합</b><br/>중앙 인증 엔진 구축]
-        S2[<b>2. 권한 위임</b><br/>OAuth2 표준 적용]
-        S3[<b>3. 연동 규격화</b><br/>로그인 흐름 일원화]
-
-        S1 --> S2 --> S3
-    end
-
-%% 3. 최종 지향점 (Target)
-    subgraph Target [Target: 통합 인증 생태계]
-        direction TB
-        AuthS[<b>통합 인증 서버</b>]
-        AppA[서비스 A]
-        AppB[서비스 B]
-        AppC{{<b>신규 서비스 C</b>}}
-
-        AuthS --- AppA
-        AuthS --- AppB
-        AuthS --- AppC
-
-        Admin2((관리자)) ==>|Single Sign-On| AuthS
-    end
-
-%% 연결선
-    Legacy -.->|인프라 개선| Current
-    Current -.->|생태계 확장| Target
-
-%% 스타일링
-    style S1 fill:#333,color:#fff,stroke:#000
-    style S2 fill:#333,color:#fff,stroke:#000
-    style S3 fill:#333,color:#fff,stroke:#000
-    style AuthS fill:#333,stroke:#fff,stroke-width:2px
-    style Target fill:#333,color:#fff,stroke:#fff,stroke-dasharray: 5 5
-```
----
-* Legacy: 각 서비스별 독립된 DB와 인증 체계로 인해 관리 업무가 비례해서 증가하던 단계입니다.
-* Current: 프로젝트를 통해 파편화된 인증을 중앙 서버로 결집하고 표준을 세우는 단계입니다.
-* Target: 관리자는 단 한 번의 인증으로 모든 권한을 통제하며, 신규 서비스는 개발 공수 없이 즉시 전사 인증 생태계에 합류하는 단계입니다.
+| 경로 | 대상 모듈 | 인증 |
+|:---|:---|:---:|
+| `/login`, `/signup`, `/api/v1/users/**` | auth-module :8080 | Public |
+| `/api/v1/matching/**` | matching-module :8081 | JWT (모든 사용자) |
+| `/api/v1/tasks/**` | task-module :8083 | JWT (모든 사용자) |
+| `/api/v1/admin/**` | admin-module :8085 | JWT `ROLE_ADMIN` |
+| `/internal/admin/**` | matching-module (직접) | JWT `ROLE_ADMIN` · Gateway 비노출 |
 
 ---
-### 📈 개발 현황 (Latest Progress)
 
-#### Phase 4 완료 항목
+## 📈 개발 현황
+
+### Phase 6 · 매칭 & 관리자 시스템 (현재 마일스톤)
 
 | 분류 | 항목 | 상태 |
-| :--- | :--- | :---: |
-| **Auth UX** | 커스텀 로그인 페이지 (`/login.html`) — Spring 기본 화면 대체 | ✅ |
-| **Auth UX** | 커스텀 회원가입 페이지 (`/signup.html`) | ✅ |
-| **소셜 로그인** | Google OAuth2 로그인 버튼 및 연동 (`/oauth2/authorization/google`) | ✅ |
-| **JWT 쿠키** | 로그인 성공 시 `accessToken` / `refreshToken` HttpOnly 쿠키 발급 | ✅ |
-| **JWT 쿠키** | `FormLoginSuccessHandler` / `OAuth2SuccessHandler` — 쿠키 기반 리다이렉트 | ✅ |
-| **Gateway 연동** | `CookieToAuthorizationFilter` — 쿠키 → `Authorization: Bearer` 변환 | ✅ |
-| **Gateway 연동** | 대시보드 인증 상태 감지 — 로그아웃 버튼 활성화 | ✅ |
-| **MSA** | `Spring Security 7.0` + OIDC Authorization Server 마이그레이션 | ✅ |
-| **MSA** | `forward-headers-strategy: framework` — 프록시 헤더 처리 | ✅ |
-| **트래픽 제어** | 가상 대기열 (Redis ZSET 기반) 구현 | ✅ |
-| **트래픽 제어** | IP Rate Limit (Bucket4j) | 📅 |
-| **트래픽 제어** | Brute-force 방어 | 📅 |
+|:---|:---|:---:|
+| **매칭 엔진** | `ConcurrentHashMap` 기반 인메모리 매칭 저장소 | ✅ |
+| **매칭 엔진** | 노출·순위(1~3위)·상호 매칭 플로우 | ✅ |
+| **매칭 엔진** | 차단 사용자 추천 제외 및 순위 부여 차단 | ✅ |
+| **관리자** | admin-module 신규 구성 (포트 8085, ROLE_ADMIN JWT) | ✅ |
+| **관리자** | 사용자 조회·노출·차단 관리 API | ✅ |
+| **관리자** | 매칭 조회·강제 삭제 API | ✅ |
+| **관리자** | 통계 API (요약·성사율·인기 사용자) | ✅ |
+| **관리자** | RestClient 기반 서비스 간 통신 (JWT 포워딩) | ✅ |
+| **TDD** | AdminService 5개 · MatchingService 5개 단위 테스트 | ✅ |
+| **버그 수정** | `updateExposure` isBlocked 상태 손실 (BUG-001) | ✅ |
 
-#### Phase 5 준비 항목
+### Phase 1~5 · 기반 구축
 
 | 분류 | 항목 | 상태 |
-| :--- | :--- | :---: |
-| **배포 준비** | 하드코딩 제거 — 환경변수 분리 (`GATEWAY_URL`, `OAUTH2_CLIENT_SECRET` 등) | ✅ |
-| **배포 준비** | `application-dev.yaml` / `application.yaml` 환경 분리 | ✅ |
-| **배포** | Render 클라우드 배포 | 🔄 |
+|:---|:---|:---:|
+| **Auth** | OAuth2 Authorization Server · JWKS 엔드포인트 | ✅ |
+| **Auth** | JWT Access(15분) · Refresh Token(7일) · RTR 전략 | ✅ |
+| **Auth** | 구글 소셜 로그인 · Form 로그인 · 회원가입 | ✅ |
+| **Auth** | 비밀번호 변경 · Redis 기반 Refresh Token 저장소 | ✅ |
+| **Auth** | 커스텀 로그인 UI (`login.html`, `signup.html`) | ✅ |
+| **Gateway** | 쿠키→`Authorization: Bearer` 변환 필터 | ✅ |
+| **Gateway** | MSA 운영 대시보드 포털 · 헬스체크 | ✅ |
+| **Gateway** | Spring Security 7.0 마이그레이션 | ✅ |
+| **트래픽** | 가상 대기열 (Waiting Room) 구현 | ✅ |
+| **트래픽** | IP Rate Limit | 📅 |
+| **배포** | Render 클라우드 배포 (Gateway · Auth · Task · Preview) | ✅ |
 
 > ✅ 완료 &nbsp;&nbsp; 🔄 진행 중 &nbsp;&nbsp; 📅 예정
 
 ---
-### 📑 Core Documentation
-상세 내역은 아래 문서들을 참고하세요.
-*   **[SECURITY_UPGRADE_REPORT.md](./docs/auth/SECURITY_UPGRADE_REPORT.md)**: Spring Security 7.0 마이그레이션 및 AI 기반 분석 리포트.
-*   **[PROJECT_MANIFESTO.md](./docs/PROJECT_MANIFESTO.md)**: 전체 프로젝트의 존재 이유와 검증 시나리오.
-*   **[TRAFFIC_CONTROL_STRATEGY.md](./docs/TRAFFIC_CONTROL_STRATEGY.md)**: Phase 4의 핵심 전략인 '차단과 대기'의 상세 설계.
-*   **[DECISION_LOG_WHY.md](./docs/DECISION_LOG_WHY.md)**: 기술 선택 시의 고민과 트레이드오프 기록.
-*   **[PHASE 4 Architecture](./docs/architecture/phase4_architecture.md)**: 스마트 게이트웨이의 데이터 흐름도.
----
-### 🛠️ Tech Stack
-- **Language**: Kotlin 2.2 / Java 21
-- **Framework**: Spring Boot 4.0 (Latest Bleeding Edge)
-- **Security**: **Spring Security 7.0** (OAuth2 Authorization Server, OIDC)
-- **Architecture**: MSA (Gateway, Auth, Task, Matching, Preview)
-- **Database**: PostgreSQL / H2 (Development)
-- **Testing**: JUnit 5, Mockito-Kotlin
+
+## 🛠 Tech Stack
+
+| 분류 | 기술 |
+|:---|:---|
+| **Language** | Kotlin 2.2.0 · Java 21 |
+| **Framework** | Spring Boot 3.5.3 · Spring Cloud Gateway |
+| **Security** | Spring Security · Spring Authorization Server · OAuth2 Resource Server |
+| **Persistence** | PostgreSQL (prod) · H2 InMemory (dev) · Redis (Refresh Token) |
+| **Testing** | JUnit 5 · Mockito-Kotlin 5.4.0 · TDD |
+| **Build** | Gradle 9.2.1 (Kotlin DSL) · Multi-module |
+| **Deploy** | Render · Docker |
 
 ---
-* [https://api-gateway-m46j.onrender.com](https://api-gateway-m46j.onrender.com) (Gateway Portal)
-* [https://preview-l7aj.onrender.com](https://preview-l7aj.onrender.com) (Previwe Portal)
-* [https://task-1px8.onrender.com](https://task-1px8.onrender.com) (Task Portal)
+
+## 📑 핵심 문서
+
+### 인증 & 보안
+
+- **[token_strategy_guide.md](./docs/auth/token_strategy_guide.md)** — JWT RTR 전략 상세 설계
+- **[SECURITY_UPGRADE_REPORT.md](./docs/auth/SECURITY_UPGRADE_REPORT.md)** — Spring Security 7.0 마이그레이션 리포트
+- **[PROJECT_MANIFESTO.md](./docs/PROJECT_MANIFESTO.md)** — 프로젝트 존재 이유 및 검증 시나리오
+- **[DECISION_LOG_WHY.md](./docs/DECISION_LOG_WHY.md)** — 기술 선택 트레이드오프 기록
+
+### 게이트웨이 & 인프라
+
+- **[gateway-ha-strategy.md](./docs/gateway/gateway-ha-strategy.md)** — 고가용성 전략
+- **[health-check-implementation.md](./docs/gateway/health-check-implementation.md)** — 헬스체크 구현
+- **[TRAFFIC_CONTROL_STRATEGY.md](./docs/TRAFFIC_CONTROL_STRATEGY.md)** — 대기열 기반 트래픽 제어 전략
+
+### 매칭 & 관리자
+
+- **[matching_plan.md](./docs/matching/matching_plan.md)** — 매칭 엔진 설계
+- **[admin-management-design.md](./docs/superpowers/specs/2026-05-10-admin-management-design.md)** — 관리자 시스템 설계 명세
+- **[BUG-001](./docs/engineering/bug-reports/BUG-001-updateExposure-resets-isBlocked.md)** — isBlocked 상태 손실 버그 리포트
+
+### 엔지니어링
+
+- **[harness-engineering.md](./docs/engineering/2026-05-10-harness-engineering.md)** — 전체 시스템 엔지니어링 정리
+
+---
+
+## 🌍 라이브 데모
+
+| 서비스 | URL |
+|:---|:---|
+| Gateway Portal | [api-gateway-m46j.onrender.com](https://api-gateway-m46j.onrender.com) |
+| Preview Portal | [preview-l7aj.onrender.com](https://preview-l7aj.onrender.com) |
+| Task Portal | [task-1px8.onrender.com](https://task-1px8.onrender.com) |

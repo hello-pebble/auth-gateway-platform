@@ -1,8 +1,8 @@
 <div align="center">
 
-# ⚙️ OAuth2 Authorization · MSA Engineering Portfolio
+# ⚙️ JWT 기반 인증 연동 포트폴리오
 
-**Spring Boot 3.5 기반 인증 서버부터 관리자 시스템까지 — 점진적으로 구축한 실전 MSA 포트폴리오**
+**여러 서비스의 로그인과 권한 관리를 단일 인증 서버로 통합하고, 서비스 간 연동 구조를 점진적으로 구축한 포트폴리오**
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.2.0-7F52FF?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5.3-6DB33F?style=flat-square&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
@@ -15,8 +15,8 @@
 
 ## 🎯 프로젝트 목표
 
-파편화된 서비스들의 인증 체계를 **OAuth2 기반 중앙 인증 서버**로 통합하고,  
-실전 MSA 아키텍처 — Gateway, 매칭 엔진, 관리자 시스템 — 를 직접 설계·구현한 엔지니어링 포트폴리오.
+서비스마다 따로 구현된 로그인 체계를 **하나의 인증 서버**로 통합하고,  
+진입 관문·매칭 엔진·관리자 시스템까지 직접 설계·구현한 엔지니어링 포트폴리오.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1e293b', 'primaryTextColor': '#f1f5f9', 'lineColor': '#64748b', 'secondaryColor': '#0f172a', 'tertiaryColor': '#1e293b', 'edgeLabelBackground': '#1e293b', 'clusterBkg': '#0f172a', 'clusterBorder': '#334155', 'titleColor': '#f1f5f9'}}}%%
@@ -29,16 +29,16 @@ graph LR
         ADM -.->|중복 로그인| P2
     end
 
-    subgraph After["✅ After · 통합 MSA 생태계"]
+    subgraph After["✅ After · 통합 서비스 연동 시스템"]
         direction TB
-        GW[🌐 Gateway] --> AS[🔐 Auth Server]
-        GW --> SVC1[📋 Task]
-        GW --> SVC2[💘 Matching]
-        GW --> SVC3[🛡️ Admin]
-        AS -.->|JWKS| SVC1
-        AS -.->|JWKS| SVC2
-        AS -.->|JWKS| SVC3
-        ADMIN((관리자)) ==>|SSO| GW
+        GW[🌐 진입 관문] --> AS[🔐 인증 서버]
+        GW --> SVC1[📋 할일 서비스]
+        GW --> SVC2[💘 매칭 서비스]
+        GW --> SVC3[🛡️ 관리자]
+        AS -.->|공개키| SVC1
+        AS -.->|공개키| SVC2
+        AS -.->|공개키| SVC3
+        ADMIN((관리자)) ==>|통합 로그인| GW
     end
 
     Before -->|"인증 통합\n표준화\n관리 자동화"| After
@@ -72,7 +72,7 @@ flowchart LR
     end
 
     subgraph L3["③ 서비스 확장"]
-        C1["📊 MSA Dashboard\nSecurity 7.0 마이그레이션\nHealth Check"]
+        C1["📊 서비스 운영 현황판\n보안 업그레이드\n상태 점검"]
         C2["📋 Task Service\n👁 Preview Service"]
     end
 
@@ -110,7 +110,7 @@ graph LR
     P2("<b>Phase 2</b><br/>Auth Server 구현<br/>보안 프로토콜 적용")
     P3("<b>Phase 3</b><br/>SSO 통합<br/>반복 로그인 제거")
     P35("<b>Phase 3.5</b><br/>트래픽 제어<br/>인증 안정성 확보")
-    P4("<b>Phase 4</b><br/>MSA Dashboard<br/>Security 7.0 마이그레이션")
+    P4("<b>Phase 4</b><br/>서비스 운영 현황판<br/>보안 업그레이드")
     P5("<b>Phase 5</b><br/>Render 클라우드<br/>배포 환경 구성")
     P6("<b>Phase 6 ★</b><br/>매칭 엔진<br/>관리자 시스템")
 
@@ -145,14 +145,14 @@ graph TD
     end
 
     subgraph SERVICES["Service Layer"]
-        AUTH["🔐 auth-module<br/><small>:8080 · OAuth2 AS · JWT 발급</small>"]
+        AUTH["🔐 auth-module<br/><small>:8080 · 인증 서버 · 토큰 발급</small>"]
         MATCH["💘 matching-module<br/><small>:8081 · 매칭 엔진 · 내부 Admin API</small>"]
         ADMIN["🛡️ admin-module<br/><small>:8085 · ROLE_ADMIN · 통계</small>"]
         TASK["📋 task-module<br/><small>:8083 · CRUD · Java/Kotlin 혼용</small>"]
         PREVIEW["👁 preview-module<br/><small>:8084 · 플레이스홀더</small>"]
     end
 
-    subgraph SECURITY["Security · JWKS"]
+    subgraph SECURITY["토큰 검증 기반"]
         JWKS["/oauth2/jwks<br/><small>공개키 제공</small>"]
     end
 
@@ -207,25 +207,25 @@ graph TD
 | **관리자** | 사용자 조회·노출·차단 관리 API | ✅ |
 | **관리자** | 매칭 조회·강제 삭제 API | ✅ |
 | **관리자** | 통계 API (요약·성사율·인기 사용자) | ✅ |
-| **관리자** | RestClient 기반 서비스 간 통신 (JWT 포워딩) | ✅ |
-| **TDD** | AdminService 5개 · MatchingService 5개 단위 테스트 | ✅ |
+| **관리자** | 서비스 간 직접 통신 (인증 정보 전달) | ✅ |
+| **테스트** | 관리자·매칭 서비스 단위 테스트 (각 5개) | ✅ |
 | **버그 수정** | `updateExposure` isBlocked 상태 손실 (BUG-001) | ✅ |
 
 ### Phase 1~5 · 기반 구축
 
 | 분류 | 항목 | 상태 |
 |:---|:---|:---:|
-| **Auth** | OAuth2 Authorization Server · JWKS 엔드포인트 | ✅ |
-| **Auth** | JWT Access(15분) · Refresh Token(7일) · RTR 전략 | ✅ |
-| **Auth** | 구글 소셜 로그인 · Form 로그인 · 회원가입 | ✅ |
-| **Auth** | 비밀번호 변경 · Redis 기반 Refresh Token 저장소 | ✅ |
-| **Auth** | 커스텀 로그인 UI (`login.html`, `signup.html`) | ✅ |
-| **Gateway** | 쿠키→`Authorization: Bearer` 변환 필터 | ✅ |
-| **Gateway** | MSA 운영 대시보드 포털 · 헬스체크 | ✅ |
-| **Gateway** | Spring Security 7.0 마이그레이션 | ✅ |
+| **인증** | 중앙 인증 서버 · 공개키 배포 엔드포인트 | ✅ |
+| **인증** | 로그인 토큰(15분) · 갱신 토큰(7일) · 자동 갱신 전략 | ✅ |
+| **인증** | 구글 소셜 로그인 · 폼 로그인 · 회원가입 | ✅ |
+| **인증** | 비밀번호 변경 · 갱신 토큰 서버 저장소 | ✅ |
+| **인증** | 커스텀 로그인 화면 (`login.html`, `signup.html`) | ✅ |
+| **진입 관문** | 쿠키 → 인증 헤더 자동 변환 | ✅ |
+| **진입 관문** | 서비스 운영 현황판 · 상태 점검 | ✅ |
+| **진입 관문** | 보안 설정 업그레이드 | ✅ |
 | **트래픽** | 가상 대기열 (Waiting Room) 구현 | ✅ |
 | **트래픽** | IP Rate Limit | 📅 |
-| **배포** | Render 클라우드 배포 (Gateway · Auth · Task · Preview) | ✅ |
+| **배포** | 클라우드 배포 (진입 관문 · 인증 · 할일 · 미리보기 서비스) | ✅ |
 
 > ✅ 완료 &nbsp;&nbsp; 🔄 진행 중 &nbsp;&nbsp; 📅 예정
 
@@ -237,9 +237,9 @@ graph TD
 |:---|:---|
 | **Language** | Kotlin 2.2.0 · Java 21 |
 | **Framework** | Spring Boot 3.5.3 · Spring Cloud Gateway |
-| **Security** | Spring Security · Spring Authorization Server · OAuth2 Resource Server |
-| **Persistence** | PostgreSQL (prod) · H2 InMemory (dev) · Redis (Refresh Token) |
-| **Testing** | JUnit 5 · Mockito-Kotlin 5.4.0 · TDD |
+| **Security** | Spring Security · Spring Authorization Server |
+| **Persistence** | PostgreSQL (prod) · H2 InMemory (dev) · Redis |
+| **Testing** | JUnit 5 · Mockito-Kotlin 5.4.0 |
 | **Build** | Gradle 9.2.1 (Kotlin DSL) · Multi-module |
 | **Deploy** | Render · Docker |
 
@@ -249,15 +249,15 @@ graph TD
 
 ### 인증 & 보안
 
-- **[token_strategy_guide.md](./docs/auth/token_strategy_guide.md)** — JWT RTR 전략 상세 설계
-- **[SECURITY_UPGRADE_REPORT.md](./docs/auth/SECURITY_UPGRADE_REPORT.md)** — Spring Security 7.0 마이그레이션 리포트
+- **[token_strategy_guide.md](./docs/auth/token_strategy_guide.md)** — 토큰 발급·갱신 전략 상세 설계
+- **[SECURITY_UPGRADE_REPORT.md](./docs/auth/SECURITY_UPGRADE_REPORT.md)** — 보안 설정 업그레이드 리포트
 - **[PROJECT_MANIFESTO.md](./docs/PROJECT_MANIFESTO.md)** — 프로젝트 존재 이유 및 검증 시나리오
 - **[DECISION_LOG_WHY.md](./docs/DECISION_LOG_WHY.md)** — 기술 선택 트레이드오프 기록
 
-### 게이트웨이 & 인프라
+### 진입 관문 & 인프라
 
 - **[gateway-ha-strategy.md](./docs/gateway/gateway-ha-strategy.md)** — 고가용성 전략
-- **[health-check-implementation.md](./docs/gateway/health-check-implementation.md)** — 헬스체크 구현
+- **[health-check-implementation.md](./docs/gateway/health-check-implementation.md)** — 서비스 상태 점검 구현
 - **[TRAFFIC_CONTROL_STRATEGY.md](./docs/TRAFFIC_CONTROL_STRATEGY.md)** — 대기열 기반 트래픽 제어 전략
 
 ### 매칭 & 관리자

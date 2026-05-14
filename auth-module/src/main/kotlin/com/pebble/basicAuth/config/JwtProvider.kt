@@ -19,10 +19,10 @@ class JwtProvider(
 ) {
 
     @Value("\${jwt.access-expiration}")
-    val accessExpiration: Long = 0
+    var accessExpiration: Long = 0
 
     @Value("\${jwt.refresh-expiration}")
-    val refreshExpiration: Long = 0
+    var refreshExpiration: Long = 0
 
     private lateinit var privateKey: RSAPrivateKey
 
@@ -50,10 +50,11 @@ class JwtProvider(
         return Jwts.builder()
             .issuer(issuerUri)
             .subject(username)
+            .audience().add(listOf("task-service", "matching-service")).and()
             .claims(claims)
             .issuedAt(now)
             .expiration(expiryDate)
-            .signWith(privateKey, Jwts.SIG.RS256) // RSA256 알고리즘 사용
+            .signWith(privateKey, Jwts.SIG.RS256)
             .compact()
     }
 

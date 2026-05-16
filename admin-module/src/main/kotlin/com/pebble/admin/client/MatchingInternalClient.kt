@@ -45,6 +45,16 @@ class MatchingInternalClient(
             .toBodilessEntity()
     }
 
+    fun applyPenalty(userId: Long, request: com.pebble.admin.dto.PenaltyRequest, token: String) {
+        restClient.post()
+            .uri("$matchingUrl/internal/admin/users/$userId/penalty")
+            .header("Authorization", "Bearer $token")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(request)
+            .retrieve()
+            .toBodilessEntity()
+    }
+
     fun getAllMatches(token: String): List<AdminMatchDto> =
         restClient.get()
             .uri("$matchingUrl/internal/admin/matches")

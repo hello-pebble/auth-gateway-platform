@@ -48,3 +48,9 @@ data class PageResponse<T>(
 
 data class ExposureUpdateRequest(val isExposed: Boolean)
 data class BlockUpdateRequest(val isBlocked: Boolean)
+
+data class PenaltyRequest(
+    val reason: String,
+    val durationDays: Int? = null,
+    val isPermanent: Boolean = false
+)

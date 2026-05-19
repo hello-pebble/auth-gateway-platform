@@ -3,12 +3,29 @@ package com.pebble.matching.domain
 import java.time.LocalDateTime
 import java.util.UUID
 
+data class PenaltyInfo(
+    val reason: String,
+    val isPermanent: Boolean,
+    val expiresAt: LocalDateTime? = null
+)
+
 data class MatchingProfile(
     val userId: Long,
     val isExposed: Boolean = false,
     val isBlocked: Boolean = false,
+    val penaltyInfo: PenaltyInfo? = null,
     val updatedAt: LocalDateTime = LocalDateTime.now()
-)
+) {
+    fun isCurrentlyBlocked(): Boolean {
+        if (penaltyInfo != null) {
+            if (penaltyInfo.isPermanent) return true
+            if (penaltyInfo.expiresAt != null && LocalDateTime.now().isBefore(penaltyInfo.expiresAt)) {
+                return true
+            }
+        }
+        return isBlocked
+    }
+}
 
 data class MatchRanking(
     val fromUserId: Long,

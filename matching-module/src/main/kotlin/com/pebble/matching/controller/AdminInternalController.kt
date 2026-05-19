@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -42,6 +43,26 @@ class AdminInternalController(
         return ResponseEntity.noContent().build()
     }
 
+    @PostMapping("/users/{userId}/penalty")
+    fun applyPenalty(
+        @PathVariable userId: Long,
+        @RequestBody request: PenaltyRequest
+    ): ResponseEntity<Void> {
+        val expiresAt = if (request.isPermanent || request.durationDays == null) {
+            null
+        } else {
+            LocalDateTime.now().plusDays(request.durationDays.toLong())
+        }
+        
+        val penaltyInfo = com.pebble.matching.domain.PenaltyInfo(
+            reason = request.reason,
+            isPermanent = request.isPermanent,
+            expiresAt = expiresAt
+        )
+        store.applyPenalty(userId, penaltyInfo)
+        return ResponseEntity.ok().build()
+    }
+
     @GetMapping("/matches")
     fun getAllMatches(): ResponseEntity<List<MatchDto>> =
         ResponseEntity.ok(store.getAllMatches().map {
@@ -65,4 +86,5 @@ class AdminInternalController(
     data class RankingDto(val fromUserId: Long, val toUserId: Long, val rank: Int, val createdAt: String)
     data class ExposureRequest(val isExposed: Boolean)
     data class BlockRequest(val isBlocked: Boolean)
+    data class PenaltyRequest(val reason: String, val durationDays: Int? = null, val isPermanent: Boolean = false)
 }

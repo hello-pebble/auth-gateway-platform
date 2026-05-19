@@ -17,7 +17,7 @@ class InMemoryMatchingStore {
     fun getProfile(userId: Long): MatchingProfile? = profiles[userId]
 
     fun getAllExposedUsers(): List<Long> =
-        profiles.filter { it.value.isExposed && !it.value.isBlocked }.keys.toList()
+        profiles.filter { it.value.isExposed && !it.value.isCurrentlyBlocked() }.keys.toList()
 
     fun getAllProfiles(): List<MatchingProfile> = profiles.values.toList()
 
@@ -26,7 +26,18 @@ class InMemoryMatchingStore {
         profiles[userId] = existing.copy(isBlocked = isBlocked, updatedAt = LocalDateTime.now())
     }
 
-    fun isBlocked(userId: Long): Boolean = profiles[userId]?.isBlocked ?: false
+    fun applyPenalty(userId: Long, penaltyInfo: com.pebble.matching.domain.PenaltyInfo) {
+        val existing = profiles.getOrDefault(userId, MatchingProfile(userId))
+        // 패널티 적용 시 isBlocked 상태도 함께 관리하거나, isCurrentlyBlocked() 메서드로 통합 판단
+        profiles[userId] = existing.copy(
+            isBlocked = true, // 하위 호환성을 위해 true로 설정
+            isExposed = false, // 정지 시 노출 해제
+            penaltyInfo = penaltyInfo,
+            updatedAt = LocalDateTime.now()
+        )
+    }
+
+    fun isBlocked(userId: Long): Boolean = profiles[userId]?.isCurrentlyBlocked() ?: false
 
     fun saveRanking(ranking: MatchRanking) {
         rankings[Pair(ranking.fromUserId, ranking.toUserId)] = ranking

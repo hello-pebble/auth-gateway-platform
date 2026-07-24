@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 인증 관련 API 테스트 (Login, Refresh, Logout)
-# Phase 2: JWT Based Authentication (Stateless with Redis Refresh Token)
+# Phase 2: JWT Based Authentication (in-memory Refresh Token repository)
 
 BASE_URL="http://localhost:8080"
 COOKIE_JAR="cookies.txt"
@@ -41,8 +41,8 @@ do_curl GET "$BASE_URL/api/v1/users/me" \
 echo
 
 echo "=== 4. Logout ==="
-# Current logout uses SecurityContext logout, which might not delete Redis token 
-# unless we implement a custom LogoutHandler. (Checked: SecurityConfig uses authenticationHandler)
+# Logout removes the browser cookies. The current in-memory Refresh Token repository
+# is process-local and is not a distributed revocation store.
 do_curl POST "$BASE_URL/api/v1/logout" \
   -b "$COOKIE_JAR" \
   -H "Authorization: Bearer $NEW_ACCESS_TOKEN"

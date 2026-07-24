@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
 @Service
 class WaitingRoomService {
 
-    // 사용자별 서비스 접근 허용 여부 관리 (실제 환경에선 Redis 권장)
+    // 사용자별 서비스 접근 허용 여부 관리 (다중 인스턴스에서는 외부 공유 저장소 필요)
     private val grantedUsers = ConcurrentHashMap<String, MutableSet<String>>()
 
     fun register(userId: String, serviceId: String): WaitingStatus {

@@ -21,6 +21,8 @@
 * **플랫폼 안정성:** 대기열 로직을 통한 고가용성 아키텍처 확보.
 
 ## 3. 기술 스택 제안 (Backend Architecture)
+> **현재 구현 상태:** 매칭 프로필·순위·성사 데이터와 대기열은 `ConcurrentHashMap` 기반 인메모리 저장소를 사용합니다. 아래 PostgreSQL·Redis·Kubernetes 구성은 구현 완료 항목이 아니라 향후 확장을 위한 설계 제안입니다.
+
 * **Language & Framework:** Kotlin / Spring Boot
 * **Database:** * PostgreSQL: 사용자 기본 정보 및 관계형 데이터 저장.
     * Redis: 실시간 대기열(Queue) 관리 및 세션 캐싱.

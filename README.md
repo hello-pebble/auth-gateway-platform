@@ -140,7 +140,7 @@ graph LR
 graph TD
     Client(("👤 Client"))
 
-    subgraph GW_ZONE["Gateway Layer · :8082"]
+    subgraph GW_ZONE["Gateway Layer · :8000"]
         GW["🌐 Spring Cloud Gateway<br/><small>쿠키→Bearer 변환 · 라우팅</small>"]
     end
 
@@ -192,6 +192,8 @@ graph TD
 | `/api/v1/admin/**` | admin-module :8085 | JWT `ROLE_ADMIN` |
 | `/internal/admin/**` | matching-module (직접) | JWT `ROLE_ADMIN` · Gateway 비노출 |
 
+> Gateway는 라우팅과 쿠키→Bearer 변환만 담당하며 JWT를 검증하지 않습니다. JWT 검증과 인가는 각 리소스 서버가 Auth의 JWKS를 이용해 독립적으로 수행합니다.
+
 ---
 
 ## 📈 개발 현황
@@ -208,7 +210,7 @@ graph TD
 | **관리자** | 매칭 조회·강제 삭제 API | ✅ |
 | **관리자** | 통계 API (요약·성사율·인기 사용자) | ✅ |
 | **관리자** | 서비스 간 직접 통신 (인증 정보 전달) | ✅ |
-| **테스트** | 관리자·매칭 서비스 단위 테스트 (각 5개) | ✅ |
+| **테스트** | 관리자 5개 · 매칭 서비스 6개 단위 테스트 | ✅ |
 | **버그 수정** | `updateExposure` isBlocked 상태 손실 (BUG-001) | ✅ |
 
 ### Phase 1~5 · 기반 구축
@@ -223,7 +225,7 @@ graph TD
 | **진입 관문** | 쿠키 → 인증 헤더 자동 변환 | ✅ |
 | **진입 관문** | 서비스 운영 현황판 · 상태 점검 | ✅ |
 | **진입 관문** | 보안 설정 업그레이드 | ✅ |
-| **트래픽** | 가상 대기열 (Waiting Room) 구현 | ✅ |
+| **트래픽** | 대기열 접근 상태 인터페이스 (현재 인메모리·즉시 허용) | ✅ |
 | **트래픽** | IP Rate Limit | 📅 |
 | **배포** | 클라우드 배포 (진입 관문 · 인증 · 할일 · 미리보기 서비스) | ✅ |
 
@@ -238,7 +240,7 @@ graph TD
 | **Language** | Kotlin 2.2.0 · Java 21 |
 | **Framework** | Spring Boot 3.5.3 · Spring Cloud Gateway |
 | **Security** | Spring Security · Spring Authorization Server |
-| **Persistence** | PostgreSQL (prod) · H2 InMemory (dev) · Redis |
+| **Persistence** | Auth: PostgreSQL(prod)·H2(dev) · Task: H2 · Matching/Refresh Token/대기열: In-memory |
 | **Testing** | JUnit 5 · Mockito-Kotlin 5.4.0 |
 | **Build** | Gradle 9.2.1 (Kotlin DSL) · Multi-module |
 | **Deploy** | Render · Docker |

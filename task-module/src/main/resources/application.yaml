@@ -20,7 +20,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: ${JWK_SET_URI:http://localhost:8080/oauth2/jwks}
+          jwk-set-uri: ${AUTH_SERVICE_URL:http://localhost:8080}/oauth2/jwks
 
 logging:
   level:

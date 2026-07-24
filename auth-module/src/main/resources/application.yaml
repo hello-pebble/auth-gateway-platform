@@ -2,39 +2,36 @@ spring:
   application:
     name: basic-auth
 
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:authdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+
+  h2:
+    console:
+      enabled: false
+
+  jpa:
+    generate-ddl: true
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:local-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:local-client-secret}
+            scope:
+              - email
+              - profile
+
 server:
   address: 0.0.0.0
   port: ${PORT:8080}
   forward-headers-strategy: framework
-
-datasource:
-  url: ${DB_URL}
-  username: ${DB_USERNAME}
-  password: ${DB_PASSWORD}
-  driver-class-name: org.postgresql.Driver
-
-h2:
-  console:
-    enabled: false
-
-jpa:
-  database: postgresql
-  generate-ddl: true
-  show-sql: true
-  hibernate:
-    ddl-auto: update
-
-security:
-  oauth2:
-    client:
-      registration:
-        google:
-          client-id: ${GOOGLE_CLIENT_ID}
-          client-secret: ${GOOGLE_CLIENT_SECRET}
-          scope:
-            - email
-            - profile
-
 
 management:
   endpoints:
@@ -46,10 +43,12 @@ management:
       show-details: always
 
 jwt:
-  secret: ${JWT_SECRET}
   access-expiration: 900000
   refresh-expiration: 604800000
 
 auth:
-  gateway-url: ${GATEWAY_URL}
-  redirect-path: ${REDIRECT_PATH}
+  gateway-url: ${GATEWAY_URL:http://localhost:8000}
+  redirect-path: ${REDIRECT_PATH:/}
+  issuer-uri: ${AUTH_ISSUER_URI:http://localhost:8000}
+  cookie:
+    secure: ${AUTH_COOKIE_SECURE:true}

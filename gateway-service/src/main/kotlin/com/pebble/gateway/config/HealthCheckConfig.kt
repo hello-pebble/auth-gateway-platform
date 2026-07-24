@@ -38,6 +38,12 @@ class HealthCheckConfig {
         @Value("\${PREVIEW_SERVICE_URL:http://localhost:8084}") previewUrl: String
     ): ReactiveHealthIndicator = createServiceHealthIndicator(webClient, "Preview Service", previewUrl)
 
+    @Bean
+    fun adminServiceHealthIndicator(
+        webClient: WebClient,
+        @Value("\${ADMIN_SERVICE_URL:http://localhost:8085}") adminUrl: String
+    ): ReactiveHealthIndicator = createServiceHealthIndicator(webClient, "Admin Service", adminUrl)
+
     private fun createServiceHealthIndicator(
         webClient: WebClient,
         serviceName: String,

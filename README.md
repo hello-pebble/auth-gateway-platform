@@ -79,10 +79,3 @@ prod 프로파일은 다음 환경변수가 필요합니다.
 | [트래픽 제어 전략](./docs/TRAFFIC_CONTROL_STRATEGY.md) | Waiting Room·Rate Limit 확장 방향 |
 | [엔지니어링 정리](./docs/engineering/2026-05-10-harness-engineering.md) | 구현 과정 전체 회고 |
 
-### Live Demo
-
-| 서비스 | URL |
-|:---|:---|
-| Gateway Portal | [api-gateway-m46j.onrender.com](https://api-gateway-m46j.onrender.com) |
-| Preview Portal | [preview-l7aj.onrender.com](https://preview-l7aj.onrender.com) |
-| Task Portal | [task-1px8.onrender.com](https://task-1px8.onrender.com) |

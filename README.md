@@ -1,281 +1,324 @@
 <div align="center">
 
-# ⚙️ JWT 기반 인증 연동 포트폴리오
+# Auth Gateway Platform
 
-**여러 서비스의 로그인과 권한 관리를 단일 인증 서버로 통합하고, 서비스 간 연동 구조를 점진적으로 구축한 포트폴리오**
+**여러 서비스의 인증·인가를 어떻게 일관되게 관리할 것인가?**
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.2.0-7F52FF?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5.3-6DB33F?style=flat-square&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Spring Security](https://img.shields.io/badge/Spring_Security-OAuth2-6DB33F?style=flat-square&logo=springsecurity&logoColor=white)](https://spring.io/projects/spring-security)
-[![Java](https://img.shields.io/badge/Java-21-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://openjdk.org/)
 
 </div>
 
 ---
 
-## 🎯 프로젝트 목표
+## 00. Overview
 
-서비스마다 따로 구현된 로그인 체계를 **하나의 인증 서버**로 통합하고,  
-진입 관문·매칭 엔진·관리자 시스템까지 직접 설계·구현한 엔지니어링 포트폴리오.
+Spring Cloud Gateway를 단일 진입점으로 두고, Authorization Server와 여러 Resource Server의 인증·인가 경계를 설계한 멀티서비스 백엔드 시스템입니다.
 
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1e293b', 'primaryTextColor': '#f1f5f9', 'lineColor': '#64748b', 'secondaryColor': '#0f172a', 'tertiaryColor': '#1e293b', 'edgeLabelBackground': '#1e293b', 'clusterBkg': '#0f172a', 'clusterBorder': '#334155', 'titleColor': '#f1f5f9'}}}%%
-graph LR
-    subgraph Before["❌ Before · 파편화된 인증"]
-        direction TB
-        P1[서비스 A] --- DB1[(회원 DB)]
-        P2[서비스 B] --- DB2[(회원 DB)]
-        ADM((관리자)) -.->|중복 로그인| P1
-        ADM -.->|중복 로그인| P2
-    end
+| 구성 요소 | 역할 |
+|:---|:---|
+| **Gateway** | 요청 라우팅과 `accessToken` Cookie → `Authorization: Bearer` 헤더 적응 |
+| **auth-module** | Authorization Server — 사용자 인증, JWT 발급·갱신, Refresh Token Rotation, JWKS 공개 |
+| **task-module** | 인증 서비스 — JWT 검증 후 Task API 제공 |
+| **preview-module** | 미인증 서비스 — 모든 요청 공개 |
+| **admin-module** | 인증·권한 서비스 — JWT 검증 후 `ROLE_ADMIN` 인가 |
 
-    subgraph After["✅ After · 통합 서비스 연동 시스템"]
-        direction TB
-        GW[🌐 진입 관문] --> AS[🔐 인증 서버]
-        GW --> SVC1[📋 할일 서비스]
-        GW --> SVC2[💘 매칭 서비스]
-        GW --> SVC3[🛡️ 관리자]
-        AS -.->|공개키| SVC1
-        AS -.->|공개키| SVC2
-        AS -.->|공개키| SVC3
-        ADMIN((관리자)) ==>|통합 로그인| GW
-    end
-
-    Before -->|"인증 통합\n표준화\n관리 자동화"| After
-
-    style Before fill:#1e293b,color:#94a3b8,stroke:#334155
-    style After fill:#1e293b,color:#f1f5f9,stroke:#334155
-    style GW fill:#3b82f6,color:#fff,stroke:#1d4ed8
-    style AS fill:#f59e0b,color:#fff,stroke:#d97706
-    style SVC1 fill:#10b981,color:#fff,stroke:#059669
-    style SVC2 fill:#8b5cf6,color:#fff,stroke:#7c3aed
-    style SVC3 fill:#ef4444,color:#fff,stroke:#dc2626
-```
-
----
-
-## 🔨 하네스 엔지니어링 여정
-
-> 기능을 하나씩 추가하며 전체 시스템을 점진적으로 완성한 실제 개발 흐름.
+### 이 프로젝트에서 인증 책임은 어디에 나뉘는가?
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1e293b', 'primaryTextColor': '#f1f5f9', 'lineColor': '#475569', 'secondaryColor': '#0f172a', 'tertiaryColor': '#1e293b', 'clusterBkg': '#0f172a', 'clusterBorder': '#1e293b', 'titleColor': '#f1f5f9', 'nodeBorder': '#334155', 'mainBkg': '#1e293b'}}}%%
 flowchart LR
-    subgraph L1["① 인증 기반"]
-        A1["🔐 OAuth2 AS\nJWT 발급·RTR"]
-        A2["👤 사용자 도메인\n회원가입·로그인\n비밀번호 변경"]
-    end
+    C([Client]) --> G[Gateway]
+    G --> A[Authorization Server]
+    G --> T[Task]
+    G --> P[Preview]
+    G --> AD[Admin]
+    A ~~~ T ~~~ P ~~~ AD
 
-    subgraph L2["② 인프라"]
-        B1["🌐 Gateway\n쿠키→Bearer 변환\n서비스 라우팅"]
-        B2["🚦 트래픽 제어\nRate Limit\n대기열(Waiting Room)"]
-    end
-
-    subgraph L3["③ 서비스 확장"]
-        C1["📊 서비스 운영 현황판\n보안 업그레이드\n상태 점검"]
-        C2["📋 Task Service\n👁 Preview Service"]
-    end
-
-    subgraph L4["④ 도메인 & 관리"]
-        D1["💘 매칭 엔진\n노출·순위·상호매칭\n인메모리 ConcurrentHashMap"]
-        D2["🛡️ 관리자 시스템\nROLE_ADMIN JWT\n차단·통계·RestClient"]
-    end
-
-    L1 -->|"JWKS 제공\nJWT 검증 기반 확보"| L2
-    L2 -->|"라우팅 규칙\n쿠키 필터 적용"| L3
-    L3 -->|"서비스 구조 안정화"| L4
-
-    style L1 fill:#0f172a,color:#f1f5f9,stroke:#f59e0b,stroke-width:2px
-    style L2 fill:#0f172a,color:#f1f5f9,stroke:#3b82f6,stroke-width:2px
-    style L3 fill:#0f172a,color:#f1f5f9,stroke:#10b981,stroke-width:2px
-    style L4 fill:#0f172a,color:#f1f5f9,stroke:#ef4444,stroke-width:2px
-    style A1 fill:#1e293b,color:#fcd34d,stroke:#f59e0b
-    style A2 fill:#1e293b,color:#fcd34d,stroke:#f59e0b
-    style B1 fill:#1e293b,color:#93c5fd,stroke:#3b82f6
-    style B2 fill:#1e293b,color:#93c5fd,stroke:#3b82f6
-    style C1 fill:#1e293b,color:#6ee7b7,stroke:#10b981
-    style C2 fill:#1e293b,color:#6ee7b7,stroke:#10b981
-    style D1 fill:#1e293b,color:#c4b5fd,stroke:#8b5cf6
-    style D2 fill:#1e293b,color:#fca5a5,stroke:#ef4444
+    style G fill:#3b82f6,color:#fff,stroke:#1d4ed8
+    style A fill:#f59e0b,color:#fff,stroke:#d97706
+    style T fill:#10b981,color:#fff,stroke:#059669
+    style P fill:#64748b,color:#fff,stroke:#475569
+    style AD fill:#10b981,color:#fff,stroke:#059669
 ```
 
----
+Gateway는 진입점이고, Authorization Server는 발급자입니다. task-module과 admin-module은 보호된 자원을 검증하며, preview-module은 공개 리소스를 제공합니다.
 
-## 🚀 개발 로드맵
+## 01. Background
+
+서비스가 늘어날수록 로그인과 권한 확인을 서비스마다 따로 구현하기 쉽습니다. 처음에는 빠르게 개발할 수 있지만, 인증 정책을 바꾸거나 새 서비스를 붙일 때 같은 보안 로직과 예외 처리를 반복하게 됩니다.
+
+### 여러 서비스가 같은 인증 체계를 공유해야 하는 이유는 무엇인가?
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1e293b', 'primaryTextColor': '#f1f5f9', 'lineColor': '#475569', 'edgeLabelBackground': '#0f172a'}}}%%
-graph LR
-    P1("<b>Phase 1</b><br/>문제 정의<br/>아키텍처 설계")
-    P2("<b>Phase 2</b><br/>Auth Server 구현<br/>보안 프로토콜 적용")
-    P3("<b>Phase 3</b><br/>SSO 통합<br/>반복 로그인 제거")
-    P35("<b>Phase 3.5</b><br/>트래픽 제어<br/>인증 안정성 확보")
-    P4("<b>Phase 4</b><br/>서비스 운영 현황판<br/>보안 업그레이드")
-    P5("<b>Phase 5</b><br/>Render 클라우드<br/>배포 환경 구성")
-    P6("<b>Phase 6 ★</b><br/>매칭 엔진<br/>관리자 시스템")
+flowchart LR
+    C([Client]) --> S1["Service A<br/>로그인 · 검증"]
+    C --> S2["Service B<br/>로그인 · 검증"]
+    C --> S3["Admin<br/>로그인 · 검증"]
 
-    P1 --> P2 --> P3 --> P35 --> P4 --> P5 --> P6
-
-    style P1  fill:#1e293b,color:#94a3b8,stroke:#334155,stroke-width:2px
-    style P2  fill:#1e293b,color:#94a3b8,stroke:#334155,stroke-width:2px
-    style P3  fill:#1e293b,color:#94a3b8,stroke:#334155,stroke-width:2px
-    style P35 fill:#1e293b,color:#94a3b8,stroke:#334155,stroke-width:2px
-    style P4  fill:#1e293b,color:#94a3b8,stroke:#334155,stroke-width:2px
-    style P5  fill:#1e293b,color:#94a3b8,stroke:#334155,stroke-width:2px
-    style P6  fill:#ef4444,color:#ffffff,stroke:#dc2626,stroke-width:3px
-
-    click P1 "./docs/phase/phase1.md"
-    click P2 "./docs/phase/phase2.md"
-    click P3 "./docs/phase/phase3.md"
-    click P35 "./docs/phase/phase3_5.md"
-    click P4 "./docs/phase/phase4.md"
+    style S1 fill:#1e293b,color:#f1f5f9,stroke:#64748b
+    style S2 fill:#1e293b,color:#f1f5f9,stroke:#64748b
+    style S3 fill:#1e293b,color:#f1f5f9,stroke:#64748b
 ```
 
----
+이 프로젝트는 인증과 서명을 중앙화하되, 각 서비스가 자기 요청을 직접 검증하도록 책임을 나눴습니다.
 
-## 🌐 시스템 아키텍처
+## 02. Problem
+
+| 문제 | 영향 | 설계 요구사항 |
+|:---|:---|:---|
+| 로그인·토큰 발급 로직의 중복 | 정책 변경과 버그 수정이 모든 서비스에 전파됨 | 인증과 발급을 한 곳으로 모을 것 |
+| 서비스별 권한 해석의 차이 | 같은 사용자가 경로마다 다르게 처리될 수 있음 | 역할 클레임과 인가 기준을 명시할 것 |
+| 비밀키 공유 | 검증 서비스도 토큰을 서명할 수 있어 유출 범위가 커짐 | 서명 권한과 검증 권한을 분리할 것 |
+| Gateway만 신뢰 | 내부 호출이나 Gateway 우회 경로가 약해질 수 있음 | 자원을 가진 서비스가 최종 검증할 것 |
+| Refresh Token 재사용 | 탈취 토큰이 만료 전까지 반복 사용될 수 있음 | 갱신 시 이전 토큰을 무효화할 것 |
+
+## 03. Design Decisions
+
+### 인증 책임을 중앙화하면서도 각 서비스의 보안을 어떻게 유지할 것인가?
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1e293b', 'primaryTextColor': '#f1f5f9', 'lineColor': '#475569', 'clusterBkg': '#0f172a', 'clusterBorder': '#334155', 'titleColor': '#f1f5f9'}}}%%
-graph TD
-    Client(("👤 Client"))
+flowchart LR
+    C([Client]) --> G["Gateway<br/>진입·적응·라우팅"]
+    G --> A["Authorization Server<br/>인증·발급·갱신"]
+    G --> R["Resource Server<br/>검증·인가·도메인 처리"]
 
-    subgraph GW_ZONE["Gateway Layer · :8082"]
-        GW["🌐 Spring Cloud Gateway<br/><small>쿠키→Bearer 변환 · 라우팅</small>"]
-    end
-
-    subgraph SERVICES["Service Layer"]
-        AUTH["🔐 auth-module<br/><small>:8080 · 인증 서버 · 토큰 발급</small>"]
-        MATCH["💘 matching-module<br/><small>:8081 · 매칭 엔진 · 내부 Admin API</small>"]
-        ADMIN["🛡️ admin-module<br/><small>:8085 · ROLE_ADMIN · 통계</small>"]
-        TASK["📋 task-module<br/><small>:8083 · CRUD · Java/Kotlin 혼용</small>"]
-        PREVIEW["👁 preview-module<br/><small>:8084 · 플레이스홀더</small>"]
-    end
-
-    subgraph SECURITY["토큰 검증 기반"]
-        JWKS["/oauth2/jwks<br/><small>공개키 제공</small>"]
-    end
-
-    Client --> GW
-    GW -->|"/login /signup"| AUTH
-    GW -->|"/api/v1/matching/**"| MATCH
-    GW -->|"/api/v1/admin/**"| ADMIN
-    GW -->|"/api/v1/tasks/**"| TASK
-    GW -->|"/api/v1/preview/**"| PREVIEW
-
-    ADMIN -->|"JWT 포워딩<br/>/internal/admin/**<br/><small>게이트웨이 우회</small>"| MATCH
-
-    AUTH --> JWKS
-    JWKS -.->|"토큰 검증"| MATCH
-    JWKS -.->|"토큰 검증"| ADMIN
-    JWKS -.->|"토큰 검증"| TASK
-
-    style GW    fill:#3b82f6,color:#fff,stroke:#1d4ed8,stroke-width:2px
-    style AUTH  fill:#f59e0b,color:#fff,stroke:#d97706,stroke-width:2px
-    style MATCH fill:#8b5cf6,color:#fff,stroke:#7c3aed,stroke-width:2px
-    style ADMIN fill:#ef4444,color:#fff,stroke:#dc2626,stroke-width:2px
-    style TASK  fill:#10b981,color:#fff,stroke:#059669,stroke-width:2px
-    style PREVIEW fill:#475569,color:#fff,stroke:#334155,stroke-width:2px
-    style JWKS  fill:#1e293b,color:#94a3b8,stroke:#334155,stroke-dasharray:5 5
-    style GW_ZONE fill:#0f172a,color:#f1f5f9,stroke:#1d4ed8
-    style SERVICES fill:#0f172a,color:#f1f5f9,stroke:#334155
-    style SECURITY fill:#0f172a,color:#f1f5f9,stroke:#334155,stroke-dasharray:5 5
+    style G fill:#3b82f6,color:#fff
+    style A fill:#f59e0b,color:#fff
+    style R fill:#10b981,color:#fff
 ```
 
-### 요청 흐름 요약
+| 결정 | 선택 | 이유 |
+|:---|:---|:---|
+| 인증 통합 | Authorization Server | 로그인·JWT 발급·갱신 정책의 변경 지점을 하나로 유지 |
+| 토큰 검증 | Resource Server | Gateway 우회·내부 호출에도 자원 서비스가 같은 기준으로 검증 |
+| 서명키 배포 | JWKS | 개인키는 발급자에만 두고 공개키 기반 검증을 분산 |
+| 토큰 갱신 | RTR | Refresh Token 재사용 위험을 줄이고 서버 측 제어권 확보 |
+| 브라우저 요청 적응 | Gateway Cookie → Bearer | 브라우저 Cookie 전달과 표준 Bearer 검증을 연결 |
 
-| 경로 | 대상 모듈 | 인증 |
-|:---|:---|:---:|
-| `/login`, `/signup`, `/api/v1/users/**` | auth-module :8080 | Public |
-| `/api/v1/matching/**` | matching-module :8081 | JWT (모든 사용자) |
-| `/api/v1/tasks/**` | task-module :8083 | JWT (모든 사용자) |
-| `/api/v1/admin/**` | admin-module :8085 | JWT `ROLE_ADMIN` |
-| `/internal/admin/**` | matching-module (직접) | JWT `ROLE_ADMIN` · Gateway 비노출 |
+## 04. Responsibility Boundaries
+
+| 컴포넌트 | Does | Does not |
+|:---|:---|:---|
+| **Gateway** | 단일 진입점 제공, 경로 라우팅, `accessToken` Cookie를 Bearer 헤더로 변환 | JWT 서명·만료 검증, 최종 역할 인가 |
+| **Authorization Server** | 사용자 인증, Access/Refresh Token 발급·갱신, JWKS 공개 | Task·Admin API의 비즈니스 인가 |
+| **task-module** | JWT 검증 후 인증 API 제공 | 토큰 서명, 역할 기반 관리자 인가 |
+| **preview-module** | 공개 Preview API 제공 | JWT 검증과 사용자 인가 |
+| **admin-module** | JWT 검증, `ROLE_ADMIN` 기반 인가 | 토큰 서명, 다른 서비스의 로그인 상태 관리 |
+
+Gateway는 인증 정보를 **전달**하지만, 그 정보가 유효한지와 해당 리소스에 접근할 수 있는지는 Resource Server가 판단합니다.
+
+## 05. Logical Architecture
+
+### 구성 요소는 어떤 신뢰 경계와 의존 관계를 갖는가?
+
+```mermaid
+flowchart LR
+    Client([Client]) --> Gateway[Gateway :8082]
+    Gateway --> Auth[auth-module :8080]
+    Gateway --> Task[task-module :8083]
+    Gateway --> Preview[preview-module :8084]
+    Gateway --> Admin[admin-module :8085]
+    Auth ~~~ Task ~~~ Preview ~~~ Admin
+    Auth -->|공개키 제공| JWKS[/oauth2/jwks]
+    JWKS -.-> Task
+    JWKS -.-> Admin
+```
+
+모듈과 라우팅 경로는 [settings.gradle.kts](./settings.gradle.kts), [Gateway 설정](./gateway-service/src/main/resources/application.yaml), 각 Resource Server의 `jwk-set-uri` 설정에 근거합니다. Preview는 [SecurityFilterChain](./preview-module/src/main/kotlin/com/pebble/preview/PreviewApplication.kt)에서 모든 요청을 공개로 설정합니다.
+
+## 06. Authentication Request Flow
+
+### 로그인 후 보호 API 요청은 어떤 순서로 처리되는가?
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as Authorization Server
+    participant G as Gateway
+    participant R as Resource Server
+
+    C->>A: 1. 로그인 요청
+    A-->>C: 2. Access Token / Refresh Token 발급
+    C->>G: 3. 보호 API 요청
+    G->>G: 4. accessToken Cookie를 Bearer 헤더로 적응
+    G->>R: 5. 라우팅된 요청 전달
+    R->>R: 6. JWT 검증과 인가
+    R-->>C: 7. 보호된 리소스 응답
+```
+
+폼 로그인 성공 시 Access Token과 Refresh Token은 `HttpOnly` Cookie로 설정됩니다. API 로그인은 Access Token을 응답 헤더·본문으로, Refresh Token을 `HttpOnly` Cookie로 전달합니다. 구현은 [FormLoginSuccessHandler](./auth-module/src/main/kotlin/com/pebble/basicAuth/config/FormLoginSuccessHandler.kt)와 [UserController](./auth-module/src/main/kotlin/com/pebble/basicAuth/controller/UserController.kt)에 있습니다.
+
+## 07. JWT & JWKS Validation
+
+### Resource Server는 매 요청마다 Authorization Server에 묻지 않고 토큰을 어떻게 신뢰하는가?
+
+```mermaid
+flowchart LR
+    A["Authorization Server<br/>RSA 개인키로 JWT 서명"] --> J[JWT]
+    A --> K["/oauth2/jwks<br/>공개키"]
+    K -. 필요 시 조회 .-> R[Resource Server]
+    J --> R
+    R --> V[공개키로 서명 검증]
+
+    style A fill:#f59e0b,color:#fff
+    style R fill:#10b981,color:#fff
+```
+
+Authorization Server는 RSA 키 쌍에서 공개키만 JWKS로 노출합니다. task·admin 모듈은 `jwk-set-uri`를 통해 공개키를 받아 Spring Security OAuth2 Resource Server로 JWT를 검증합니다. admin 모듈은 `roles` 클레임을 Spring Security authority로 변환하고 `ROLE_ADMIN`을 요구합니다. preview 모듈은 공개 서비스이므로 JWT 검증 대상이 아닙니다.
+
+현재 확인된 구현 범위는 서명 검증과 역할 매핑입니다. issuer·audience 검증, JWKS 캐시 TTL과 키 회전 정책은 README의 완료 기능으로 주장하지 않습니다.
+
+## 08. Refresh Token Rotation (RTR)
+
+### 갱신 전후 Refresh Token 상태는 어떻게 달라지는가?
+
+```mermaid
+flowchart LR
+    subgraph Before[재사용 모델]
+        B1[Refresh Token] --> B2[여러 번 갱신 가능]
+    end
+    subgraph After[RTR 적용]
+        A1[Refresh Token] --> A2[저장값과 비교]
+        A2 -->|일치| A3[기존 토큰 삭제]
+        A3 --> A4[새 Access·Refresh Token 발급]
+        A2 -->|불일치| A5[저장 토큰 삭제·거부]
+    end
+
+    B2 ~~~ A1
+
+    style B2 fill:#ef4444,color:#fff
+    style A2 fill:#3b82f6,color:#fff
+    style A4 fill:#10b981,color:#fff
+    style A5 fill:#ef4444,color:#fff
+```
+
+`/api/v1/refresh`는 Cookie의 Refresh Token을 서버 저장값과 비교합니다. 일치하면 기존 값을 삭제하고 새 토큰 쌍을 저장하며, 불일치하면 저장된 토큰을 삭제하고 요청을 거부합니다. 저장소는 현재 [인메모리 RefreshTokenRepository](./auth-module/src/main/kotlin/com/pebble/basicAuth/persistence/RefreshTokenRepository.kt)입니다.
+
+따라서 RTR은 구현되어 있지만, 다중 인스턴스 환경을 위한 공유 저장소·토큰 family·자동화된 재사용 탐지 테스트는 후속 과제입니다.
+
+## 09. Waiting Room
+
+### 인증된 사용자는 Waiting Room을 통해 어떻게 서비스에 진입하는가?
+
+```mermaid
+flowchart LR
+    C([인증된 사용자]) --> G[Gateway]
+    G --> W["Waiting Room<br/>진입 허용 상태"]
+    W --> S[인증 서비스]
+
+    style G fill:#3b82f6,color:#fff
+    style W fill:#64748b,color:#fff
+```
+
+Waiting Room은 auth-module에 존재하는 프로토타입으로, 현재 등록 요청을 즉시 허용합니다. Redis 기반 순번·배치 진입이나 Rate Limit은 구현 완료 기능이 아니라 확장 방향입니다.
+
+## 10. Gateway Cookie → Bearer Adaptation
+
+### Cookie 요청은 Resource Server가 이해하는 Bearer 요청으로 어떻게 바뀌는가?
+
+```mermaid
+flowchart LR
+    C["Client Request<br/>Cookie: accessToken=JWT"] --> G[Gateway Filter]
+    G --> R["Resource Server Request<br/>Authorization: Bearer JWT"]
+
+    style G fill:#3b82f6,color:#fff
+```
+
+[CookieToAuthorizationFilter](./gateway-service/src/main/kotlin/com/pebble/gateway/config/CookieToAuthorizationFilter.kt)는 기존 `Authorization` 헤더가 있으면 그대로 통과시킵니다. 헤더가 없고 `accessToken` Cookie가 있으면 해당 값으로 Bearer 헤더를 추가합니다. Cookie가 없으면 요청을 변경하지 않습니다.
+
+이 변환은 브라우저 요청을 표준 Bearer 기반 Resource Server와 연결하는 어댑터일 뿐, Gateway가 JWT를 검증하거나 인가하는 기능은 아닙니다.
+
+## 11. Troubleshooting
+
+### Kotlin nullability — 검증 오류 메시지의 타입 불일치
+
+#### Problem
+
+입력값 검증 오류를 처리하는 과정에서 `String?`이 `Map<String, String>`에 들어가려 해 컴파일 오류가 발생했습니다.
+
+#### Cause
+
+`FieldError.defaultMessage`가 nullable 타입인데 Java `Stream`/`Optional` 스타일로 처리하면서 반환값이 nullable로 추론된 것이 원인입니다.
+
+#### Options
+
+| 대안 | 장점 | 단점 | 채택 |
+|:---|:---|:---|:---:|
+| Java Stream·Optional 유지 | 기존 Java 코드와 유사 | Kotlin nullable 타입을 명확히 좁히기 어려움 | 아니오 |
+| Kotlin `firstOrNull()`과 Elvis 연산자 | null 처리 결과를 non-null `String`으로 확정 | Kotlin 문법에 맞춘 수정 필요 | 예 |
+
+#### Decision & Implementation
+
+`firstOrNull()?.defaultMessage ?: "입력값이 올바르지 않습니다."`로 변경해 오류 메시지를 non-null `String`으로 확정했습니다. 수정은 [GlobalExceptionHandler](./auth-module/src/main/kotlin/com/pebble/basicAuth/config/GlobalExceptionHandler.kt)에 있습니다.
+
+#### Verification
+
+컴파일 오류가 해소됐고, 유효성 검증 오류에 기본 메시지를 반환하는 코드 경로를 확인했습니다. 이 사례의 자동화 테스트는 아직 추가하지 않았습니다.
+
+## 12. Verification
+
+수치나 운영 성능은 측정하지 않았습니다. 아래 표는 현재 코드와 테스트에서 확인한 범위만 표시합니다.
+
+| 검증 대상 | 시나리오 | 증거 | 결과 | 비고 |
+|:---|:---|:---|:---:|:---|
+| JWT 발급의 audience 클레임 | Access Token 생성 후 `aud` 확인 | [JwtProviderAudTest](./auth-module/src/test/kotlin/com/pebble/basicAuth/config/JwtProviderAudTest.kt) | 확인 | audience **발급** 테스트이며 Resource Server 검증 테스트는 아님 |
+| 관리자 통계 | 인메모리 데이터 집계 | [AdminServiceTest](./admin-module/src/test/kotlin/com/pebble/admin/AdminServiceTest.kt) | 확인 | 서비스 단위 테스트 |
+| Cookie → Bearer 적응 | Cookie 요청이 헤더로 변환됨 | [CookieToAuthorizationFilter](./gateway-service/src/main/kotlin/com/pebble/gateway/config/CookieToAuthorizationFilter.kt) | 코드 확인 | 자동화 테스트 추가 예정 |
+| RTR 재사용 처리 | 갱신 뒤 이전 Refresh Token 요청 | [UserController](./auth-module/src/main/kotlin/com/pebble/basicAuth/controller/UserController.kt) | 코드 확인 | 자동화 테스트 추가 예정 |
+| JWKS 통합 검증 | 유효·위조·만료 JWT 처리 | 설정 확인 | 미검증 | 통합 테스트 추가 예정 |
+
+## 13. Final Architecture
+
+### 최종적으로 어떤 경계와 흐름을 가진 시스템이 되었는가?
+
+```mermaid
+flowchart LR
+    Client([Client]) --> Gateway["Gateway :8082<br/>라우팅 · Cookie → Bearer"]
+    Gateway --> Auth["auth-module :8080<br/>인증 · JWT 발급 · RTR"]
+    Gateway --> Task["task-module :8083<br/>JWT 검증 · 인증 서비스"]
+    Gateway --> Admin["admin-module :8085<br/>JWT 검증 · ROLE_ADMIN"]
+    Gateway --> Preview["preview-module :8084<br/>미인증 서비스"]
+    Auth ~~~ Task ~~~ Preview ~~~ Admin
+    Auth --> JWKS["/oauth2/jwks<br/>공개키"]
+    JWKS -.-> Task
+    JWKS -.-> Admin
+
+    style Gateway fill:#3b82f6,color:#fff
+    style Auth fill:#f59e0b,color:#fff
+    style Task fill:#10b981,color:#fff
+    style Admin fill:#ef4444,color:#fff
+    style Preview fill:#64748b,color:#fff
+```
+
+인증과 서명은 Authorization Server로 중앙화했습니다. task-module은 인증 서비스를, admin-module은 인증·권한 서비스를, preview-module은 미인증 서비스를 제공합니다. Gateway는 이를 연결하는 단일 진입점과 요청 적응 계층으로 유지했습니다.
+
+## 14. Tech Stack
+
+| 영역 | 기술 | 사용 위치 |
+|:---|:---|:---|
+| Language | Kotlin 2.2.0, Java 21 | 멀티 모듈 서비스 구현 |
+| Framework | Spring Boot 3.5.3 | 전체 서비스 런타임 |
+| Gateway | Spring Cloud Gateway 2025.0.0 | 라우팅과 Cookie → Bearer 필터 |
+| Security | Spring Security, Spring Authorization Server, OAuth2 Resource Server | 토큰 발급·검증·역할 인가 |
+| Persistence | JPA, H2/PostgreSQL 의존성, 인메모리 저장소 | 사용자·개발 환경, 현재 Refresh Token 상태 |
+| Test | JUnit 5, Mockito | 인증·관리 서비스 단위 테스트 |
+| Build | Gradle Kotlin DSL | 멀티 모듈 빌드 |
+
+버전과 의존성은 각 모듈의 `build.gradle.kts`를 기준으로 했습니다.
+
+## 15. Retrospective
+
+- 중앙 인증 서버를 둔다고 모든 보안 책임을 중앙에 모으는 것은 아닙니다. 실제 자원을 가진 서비스가 최종 검증과 인가를 수행해야 내부 호출에도 같은 경계를 유지할 수 있습니다.
+- JWT는 일반 요청을 Stateless하게 처리하게 하지만, Refresh Token처럼 즉시 제어가 필요한 정보에는 서버 측 상태가 필요합니다.
+- JWKS는 공개키 배포를 통해 비밀키 공유를 피하지만, 키 회전·캐시·장애 정책까지 검증해야 운영 설계가 완성됩니다.
+- Waiting Room과 Rate Limit은 현재 확장 방향입니다. Redis 기반 대기열과 분산 환경의 Refresh Token 저장소, JWKS 통합 테스트, Gateway 필터 테스트를 다음 우선순위로 둡니다.
 
 ---
 
-## 📈 개발 현황
+## 📑 Related Documents
 
-### Phase 6 · 매칭 & 관리자 시스템 (현재 마일스톤)
-
-| 분류 | 항목 | 상태 |
-|:---|:---|:---:|
-| **매칭 엔진** | `ConcurrentHashMap` 기반 인메모리 매칭 저장소 | ✅ |
-| **매칭 엔진** | 노출·순위(1~3위)·상호 매칭 플로우 | ✅ |
-| **매칭 엔진** | 차단 사용자 추천 제외 및 순위 부여 차단 | ✅ |
-| **관리자** | admin-module 신규 구성 (포트 8085, ROLE_ADMIN JWT) | ✅ |
-| **관리자** | 사용자 조회·노출·차단 관리 API | ✅ |
-| **관리자** | 매칭 조회·강제 삭제 API | ✅ |
-| **관리자** | 통계 API (요약·성사율·인기 사용자) | ✅ |
-| **관리자** | 서비스 간 직접 통신 (인증 정보 전달) | ✅ |
-| **테스트** | 관리자·매칭 서비스 단위 테스트 (각 5개) | ✅ |
-| **버그 수정** | `updateExposure` isBlocked 상태 손실 (BUG-001) | ✅ |
-
-### Phase 1~5 · 기반 구축
-
-| 분류 | 항목 | 상태 |
-|:---|:---|:---:|
-| **인증** | 중앙 인증 서버 · 공개키 배포 엔드포인트 | ✅ |
-| **인증** | 로그인 토큰(15분) · 갱신 토큰(7일) · 자동 갱신 전략 | ✅ |
-| **인증** | 구글 소셜 로그인 · 폼 로그인 · 회원가입 | ✅ |
-| **인증** | 비밀번호 변경 · 갱신 토큰 서버 저장소 | ✅ |
-| **인증** | 커스텀 로그인 화면 (`login.html`, `signup.html`) | ✅ |
-| **진입 관문** | 쿠키 → 인증 헤더 자동 변환 | ✅ |
-| **진입 관문** | 서비스 운영 현황판 · 상태 점검 | ✅ |
-| **진입 관문** | 보안 설정 업그레이드 | ✅ |
-| **트래픽** | 가상 대기열 (Waiting Room) 구현 | ✅ |
-| **트래픽** | IP Rate Limit | 📅 |
-| **배포** | 클라우드 배포 (진입 관문 · 인증 · 할일 · 미리보기 서비스) | ✅ |
-
-> ✅ 완료 &nbsp;&nbsp; 🔄 진행 중 &nbsp;&nbsp; 📅 예정
-
----
-
-## 🛠 Tech Stack
-
-| 분류 | 기술 |
-|:---|:---|
-| **Language** | Kotlin 2.2.0 · Java 21 |
-| **Framework** | Spring Boot 3.5.3 · Spring Cloud Gateway |
-| **Security** | Spring Security · Spring Authorization Server |
-| **Persistence** | PostgreSQL (prod) · H2 InMemory (dev) · Redis |
-| **Testing** | JUnit 5 · Mockito-Kotlin 5.4.0 |
-| **Build** | Gradle 9.2.1 (Kotlin DSL) · Multi-module |
-| **Deploy** | Render · Docker |
-
----
-
-## 📑 핵심 문서
-
-### 인증 & 보안
-
-- **[token_strategy_guide.md](./docs/auth/token_strategy_guide.md)** — 토큰 발급·갱신 전략 상세 설계
-- **[SECURITY_UPGRADE_REPORT.md](./docs/auth/SECURITY_UPGRADE_REPORT.md)** — 보안 설정 업그레이드 리포트
-- **[PROJECT_MANIFESTO.md](./docs/PROJECT_MANIFESTO.md)** — 프로젝트 존재 이유 및 검증 시나리오
-- **[DECISION_LOG_WHY.md](./docs/DECISION_LOG_WHY.md)** — 기술 선택 트레이드오프 기록
-
-### 진입 관문 & 인프라
-
-- **[gateway-ha-strategy.md](./docs/gateway/gateway-ha-strategy.md)** — 고가용성 전략
-- **[health-check-implementation.md](./docs/gateway/health-check-implementation.md)** — 서비스 상태 점검 구현
-- **[TRAFFIC_CONTROL_STRATEGY.md](./docs/TRAFFIC_CONTROL_STRATEGY.md)** — 대기열 기반 트래픽 제어 전략
-
-### 매칭 & 관리자
-
-- **[matching_plan.md](./docs/matching/matching_plan.md)** — 매칭 엔진 설계
-- **[admin-management-design.md](./docs/superpowers/specs/2026-05-10-admin-management-design.md)** — 관리자 시스템 설계 명세
-- **[BUG-001](./docs/engineering/bug-reports/BUG-001-updateExposure-resets-isBlocked.md)** — isBlocked 상태 손실 버그 리포트
-
-### 엔지니어링
-
-- **[harness-engineering.md](./docs/engineering/2026-05-10-harness-engineering.md)** — 전체 시스템 엔지니어링 정리
-
----
-
-## 🌍 라이브 데모
-
-| 서비스 | URL |
-|:---|:---|
-| Gateway Portal | [api-gateway-m46j.onrender.com](https://api-gateway-m46j.onrender.com) |
-| Preview Portal | [preview-l7aj.onrender.com](https://preview-l7aj.onrender.com) |
-| Task Portal | [task-1px8.onrender.com](https://task-1px8.onrender.com) |
+- [토큰 전략](./docs/auth/token_strategy_guide.md)
+- [기술 선택 기록](./docs/DECISION_LOG_WHY.md)
+- [트래픽 제어 전략](./docs/TRAFFIC_CONTROL_STRATEGY.md)
+- [전체 엔지니어링 정리](./docs/engineering/2026-05-10-harness-engineering.md)

@@ -4,8 +4,8 @@
 
 **여러 서비스의 인증·인가를 어떻게 일관되게 관리할 것인가?**
 
-<div>
 </div>
+
 ## 00. Overview
 
 Spring Cloud Gateway를 단일 진입점으로 두고, Authorization Server와 여러 Resource Server의 인증·인가 경계를 설계한 멀티서비스 백엔드 시스템입니다.

@@ -5,11 +5,9 @@ import com.pebble.basicAuth.domain.UserService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.redisson.api.RedissonClient
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.http.HttpHeaders
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository
 import org.springframework.test.context.bean.override.mockito.MockitoBean
@@ -28,12 +26,6 @@ class UserControllerMeTest @Autowired constructor(
 
     @MockitoBean
     private lateinit var clientRegistrationRepository: ClientRegistrationRepository
-
-    @MockitoBean
-    private lateinit var redisTemplate: StringRedisTemplate
-
-    @MockitoBean
-    private lateinit var redissonClient: RedissonClient
 
     private val username = "testuser"
     private val password = "password123!"

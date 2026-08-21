@@ -1,12 +1,11 @@
 #!/bin/bash
 
-# JWT 및 Redis Refresh Token 상태 확인 테스트
-# Phase 2: Stateless Authentication with Redis Refresh Token
+# JWT 및 인메모리 Refresh Token Rotation 흐름 확인
+# 서버 내부 저장소는 직접 조회하지 않고 API 응답과 쿠키 교체로 검증합니다.
 
-BASE_URL="http://localhost:8080"
+BASE_URL="${BASE_URL:-http://localhost:8080}"
 COOKIE_JAR="jwt_cookies.txt"
 
-# Function to make curl request and separate headers from body
 do_curl() {
   local method=$1
   local url=$2
@@ -16,45 +15,22 @@ do_curl() {
 
 rm -f "$COOKIE_JAR"
 
-echo "=== JWT & Redis Refresh Token Test ==="
-echo ""
-
-echo "=== 1. Login (testuser) ==="
+echo "=== 1. Login ==="
 LOGIN_RESPONSE=$(do_curl POST "$BASE_URL/api/v1/login" \
   -c "$COOKIE_JAR" \
-  -d "username=testuser&password=password123")
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","password":"password123"}')
+echo "$LOGIN_RESPONSE" | grep "HTTP/"
 
-ACCESS_TOKEN=$(echo "$LOGIN_RESPONSE" | grep -i "Authorization:" | awk '{print $2}' | tr -d '\r')
-echo "Login successful. Access Token received."
-echo
-
-echo "=== 2. Check Redis for Refresh Token (Key: RT:testuser) ==="
-# Using auth-redis container name from docker-compose.yml
-docker exec auth-redis redis-cli keys 'RT:*'
-echo "Token Value in Redis:"
-docker exec auth-redis redis-cli get 'RT:testuser'
-echo ""
-
-echo "=== 3. Refresh Token (Verify Redis Update) ==="
+echo "=== 2. Refresh and rotate cookies ==="
 REFRESH_RESPONSE=$(do_curl POST "$BASE_URL/api/v1/refresh" \
   -b "$COOKIE_JAR" \
   -c "$COOKIE_JAR")
+echo "$REFRESH_RESPONSE" | grep "HTTP/"
 
-NEW_ACCESS_TOKEN=$(echo "$REFRESH_RESPONSE" | grep -i "Authorization:" | awk '{print $2}' | tr -d '\r')
-echo "Refresh successful. New Access Token received."
-echo
-
-echo "=== 4. Check Redis again (Rotation Check) ==="
-docker exec auth-redis redis-cli get 'RT:testuser'
-echo ""
-
-echo "=== 5. Logout ==="
+echo "=== 3. Logout ==="
 do_curl POST "$BASE_URL/api/v1/logout" \
   -b "$COOKIE_JAR" \
-  -H "Authorization: Bearer $NEW_ACCESS_TOKEN"
-echo
-
-echo "=== 6. Check Redis after logout (Should be deleted if LogoutHandler is implemented) ==="
-docker exec auth-redis redis-cli keys 'RT:*'
+  -c "$COOKIE_JAR" | grep "HTTP/"
 
 rm -f "$COOKIE_JAR"

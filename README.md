@@ -322,3 +322,13 @@ flowchart LR
 - [기술 선택 기록](./docs/DECISION_LOG_WHY.md)
 - [트래픽 제어 전략](./docs/TRAFFIC_CONTROL_STRATEGY.md)
 - [전체 엔지니어링 정리](./docs/engineering/2026-05-10-harness-engineering.md)
+
+---
+
+## 🌍 Live Demo
+
+| 서비스 | URL |
+|:---|:---|
+| Gateway Portal | [api-gateway-m46j.onrender.com](https://api-gateway-m46j.onrender.com) |
+| Preview Portal | [preview-l7aj.onrender.com](https://preview-l7aj.onrender.com) |
+| Task Portal | [task-1px8.onrender.com](https://task-1px8.onrender.com) |

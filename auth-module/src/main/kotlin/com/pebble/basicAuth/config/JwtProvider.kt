@@ -10,6 +10,7 @@ import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.security.interfaces.RSAPrivateKey
+import java.security.interfaces.RSAPublicKey
 import java.util.*
 
 @Component
@@ -25,6 +26,7 @@ class JwtProvider(
     var refreshExpiration: Long = 0
 
     private lateinit var privateKey: RSAPrivateKey
+    private lateinit var publicKey: RSAPublicKey
 
     @PostConstruct
     protected fun init() {
@@ -33,6 +35,7 @@ class JwtProvider(
         val jwks = jwkSource.get(jwkSelector, null)
         val rsaKey = jwks[0].toRSAKey()
         this.privateKey = rsaKey.toRSAPrivateKey()
+        this.publicKey = rsaKey.toRSAPublicKey()
     }
 
     fun createAccessToken(username: String, role: String): String {
@@ -62,7 +65,7 @@ class JwtProvider(
         // 검증은 이제 Gateway나 Resource Server가 담당하지만, 
         // 내부 API(/me, /refresh 등)에서 여전히 필요하므로 구현 유지
         return Jwts.parser()
-            .keyLocator { header -> if (header is io.jsonwebtoken.JwsHeader) privateKey else null } // 단순화를 위해 개인키로도 검증(공개키 검증이 정석)
+            .verifyWith(publicKey)
             .build()
             .parseSignedClaims(token)
             .payload
@@ -71,7 +74,7 @@ class JwtProvider(
     fun validateToken(token: String): Boolean {
         return try {
             Jwts.parser()
-                .keyLocator { _ -> privateKey }
+                .verifyWith(publicKey)
                 .build()
                 .parseSignedClaims(token)
             true

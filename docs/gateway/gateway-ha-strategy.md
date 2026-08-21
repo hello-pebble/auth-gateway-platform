@@ -3,7 +3,7 @@
 ## 현재 구조와 문제
 
 ```
-클라이언트 → Gateway(8082)
+클라이언트 → Gateway(8000)
               ├─ Cookie → Authorization 헤더 변환
               ├─ auth-module   (8080)
               ├─ task-module   (8083)
@@ -46,7 +46,7 @@
 클라이언트
     ↓
   Nginx (80/443)  ← 헬스체크 + 라운드로빈
-  ├─ gateway:8082 (인스턴스 1)
+  ├─ gateway:8000 (인스턴스 1)
   └─ gateway:8083 (인스턴스 2)
 ```
 

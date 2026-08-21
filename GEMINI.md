@@ -3,16 +3,11 @@
 이 프로젝트는 파편화된 서비스들의 인증 체계를 하나로 통합하는 통합 인증 생태계(SSO) 구축 프로젝트입니다. 모든 AI 작업은 아래 지침과 `docs/` 내의 설계 문서를 최우선으로 준수해야 합니다.
 
 ## 🏗️ Architecture & Tech Stack
-- **Architecture**: MSA (Smart Gateway, Auth Server, Task, Matching, Preview)
+- **Architecture**: MSA (Smart Gateway, Auth Server, Task, Preview, Admin)
 - **Language**: Kotlin 2.2.0 (JVM 21)
 - **Framework**: Spring Boot 3.5.3 + Spring Security 7.0
 - **Security**: OAuth2 Authorization Server, OIDC, JWT (HttpOnly Cookie)
 - **Build Tool**: Gradle (Kotlin DSL)
-
-## 📜 Development Workflow & Phase
-프로젝트는 **Phase 기반**으로 진행됩니다. 현재 작업의 맥락을 파악하기 위해 관련 문서를 먼저 확인하십시오.
-- **Phase 4 (현재)**: MSA 대시보드 구축, Spring Security 7.0 마이그레이션, 트래픽 제어(가상 대기열).
-- **Phase 5 (준비)**: 클라우드 배포(Render), 환경 변수 분리.
 
 ## 🛠️ Coding Standards & Conventions
 - **Kotlin-First**: 기본적으로 Kotlin 관습(Idiomatic Kotlin)을 따릅니다.

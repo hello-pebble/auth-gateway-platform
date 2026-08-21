@@ -1,0 +1,20 @@
+services:
+  auth-service:
+    ports:
+      - "8080:8080"
+
+  matching-service:
+    ports:
+      - "8081:8081"
+
+  task-service:
+    ports:
+      - "8083:8083"
+
+  preview-service:
+    ports:
+      - "8084:8084"
+
+  admin-service:
+    ports:
+      - "8085:8085"

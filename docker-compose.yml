@@ -1,82 +1,149 @@
-name: basicAuth
+name: pebble-msa
+
+x-app-healthcheck: &app-healthcheck
+  interval: 10s
+  timeout: 5s
+  retries: 12
+  start_period: 30s
 
 services:
-  redis:
-    image: redis:7
-    container_name: auth-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
   postgres:
     image: postgres:17
-    container_name: auth-db
-    ports:
-      - "5432:5432"
     environment:
-      POSTGRES_DB: authdb
-      POSTGRES_USER: auth
-      POSTGRES_PASSWORD: auth
+      POSTGRES_DB: ${DB_NAME:-authdb}
+      POSTGRES_USER: ${DB_USERNAME:-auth}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-auth-local}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U auth -d authdb"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-auth} -d ${DB_NAME:-authdb}"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+    networks:
+      - pebble-net
 
   auth-service:
     build:
       context: .
       dockerfile: auth-module/Dockerfile
-    container_name: auth-service
-    ports:
-      - "8080:8080"
+    environment:
+      PORT: 8080
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-authdb}
+      DB_USERNAME: ${DB_USERNAME:-auth}
+      DB_PASSWORD: ${DB_PASSWORD:-auth-local}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-local-client-id}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-local-client-secret}
+      GATEWAY_URL: ${GATEWAY_URL:-http://localhost:8000}
+      AUTH_ISSUER_URI: ${AUTH_ISSUER_URI:-http://localhost:8000}
+      REDIRECT_PATH: ${REDIRECT_PATH:-/}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      OAUTH2_CLIENT_SECRET: "{noop}${OAUTH2_CLIENT_SECRET:-local-client-secret}"
+      OAUTH2_REDIRECT_URI: ${OAUTH2_REDIRECT_URI:-http://localhost:8000/login/oauth2/code/base-auth-client}
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health >/dev/null || exit 1"]
+    networks:
+      - pebble-net
 
   matching-service:
     build:
       context: .
       dockerfile: matching-module/Dockerfile
-    container_name: matching-service
-    ports:
-      - "8081:8081"
+    environment:
+      PORT: 8081
+      AUTH_SERVICE_URL: http://auth-service:8080
     depends_on:
       auth-service:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health >/dev/null || exit 1"]
+    networks:
+      - pebble-net
 
   task-service:
     build:
       context: .
       dockerfile: task-module/Dockerfile
-    container_name: task-service
-    ports:
-      - "8082:8082"
+    environment:
+      PORT: 8083
+      AUTH_SERVICE_URL: http://auth-service:8080
     depends_on:
       auth-service:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health >/dev/null || exit 1"]
+    networks:
+      - pebble-net
+
+  preview-service:
+    build:
+      context: .
+      dockerfile: preview-module/Dockerfile
+    environment:
+      PORT: 8084
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health >/dev/null || exit 1"]
+    networks:
+      - pebble-net
+
+  admin-service:
+    build:
+      context: .
+      dockerfile: admin-module/Dockerfile
+    environment:
+      PORT: 8085
+      AUTH_SERVICE_URL: http://auth-service:8080
+      MATCHING_SERVICE_URL: http://matching-service:8081
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      matching-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8085/actuator/health >/dev/null || exit 1"]
+    networks:
+      - pebble-net
 
   gateway-service:
     build:
       context: .
       dockerfile: gateway-service/Dockerfile
-    container_name: gateway-service
+    environment:
+      PORT: 8000
+      AUTH_SERVICE_URL: http://auth-service:8080
+      MATCHING_SERVICE_URL: http://matching-service:8081
+      TASK_SERVICE_URL: http://task-service:8083
+      PREVIEW_SERVICE_URL: http://preview-service:8084
+      ADMIN_SERVICE_URL: http://admin-service:8085
     ports:
       - "8000:8000"
     depends_on:
       auth-service:
-        condition: service_started
+        condition: service_healthy
+      matching-service:
+        condition: service_healthy
+      task-service:
+        condition: service_healthy
+      preview-service:
+        condition: service_healthy
+      admin-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/localhost/8000'"]
+    networks:
+      - pebble-net
+
+networks:
+  pebble-net:
 
 volumes:
   postgres-data:
-  redis-data:

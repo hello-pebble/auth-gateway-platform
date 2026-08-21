@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * [Phase 2-2] 인메모리(HashMap)를 이용한 Refresh Token 저장소
- * (배포 편의를 위해 Redis 대신 In-memory 방식을 사용합니다.)
+ * (현재는 배포 편의를 위해 프로세스 내부 메모리를 사용합니다.)
  */
 @Repository
 class RefreshTokenRepository {

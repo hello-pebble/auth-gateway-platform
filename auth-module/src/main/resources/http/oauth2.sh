@@ -36,7 +36,7 @@ echo "$RESPONSE" | grep "HTTP/"
 echo
 
 echo "=== 3. Logout (Cookie Removal) ==="
-# 로그아웃 성공 시 Redis에서 토큰이 삭제되고 쿠키가 무효화되어야 합니다.
+# 로그아웃 성공 시 브라우저 쿠키가 무효화되어야 합니다.
 do_curl POST "$BASE_URL/api/v1/logout" \
   -b "$COOKIE_JAR" \
   -c "$COOKIE_JAR"

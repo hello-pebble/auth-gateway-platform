@@ -8,7 +8,7 @@
 
 ## 1. 프로젝트 개요
 
-릴레이 소개팅 서비스의 인증/매칭/관리 백엔드. Kotlin 2.2.0 + Spring Boot 3.5.3 기반 MSA로 구성되며, 모든 저장소는 인메모리(ConcurrentHashMap) 유지.
+릴레이 소개팅 서비스의 인증/매칭/관리 백엔드. Kotlin 2.2.0 + Spring Boot 3.5.3 기반 MSA로 구성됩니다. Auth는 PostgreSQL(prod)/H2(dev)를 사용하고, Task는 H2, Matching·Refresh Token·대기열은 인메모리 저장소를 사용합니다.
 
 ---
 
@@ -17,7 +17,7 @@
 | 모듈 | 포트 | 역할 | 상태 |
 |---|---|---|---|
 | auth-module | 8080 | OAuth2 AS, JWT 발급, 사용자 관리, 비밀번호 변경 | 완료 |
-| gateway-service | 8082 | Spring Cloud Gateway, 쿠키→헤더 변환 | 완료 |
+| gateway-service | 8000 | Spring Cloud Gateway, 쿠키→헤더 변환 | 완료 |
 | matching-module | 8081 | 인메모리 매칭 엔진 (노출·순위·매칭·차단) | 완료 |
 | task-module | 8083 | 태스크 CRUD (Java/Kotlin 혼용) | 완료 |
 | preview-module | 8084 | 플레이스홀더 | 스켈레톤 |
@@ -29,7 +29,7 @@
 [클라이언트]
     │
     ▼
-[gateway-service :8082]  ← 쿠키→Bearer 헤더 변환, JWT 통과(검증 없음)
+[gateway-service :8000]  ← 쿠키→Bearer 헤더 변환, JWT 통과(검증 없음)
     ├── /api/v1/matching/**  →  matching-module :8081  (JWT 검증)
     ├── /api/v1/admin/**     →  admin-module :8085     (ROLE_ADMIN JWT 검증)
     └── /api/v1/**, /login   →  auth-module :8080      (공개 or 인증)
@@ -50,7 +50,7 @@
 - **Authorization Server:** Spring Authorization Server
 - **Access Token:** 15분, HttpOnly Secure 쿠키 전달
 - **Refresh Token:** 7일, Refresh Token Rotation(RTR) 적용 — 재발급 시 기존 즉시 무효화
-- **Redis:** Refresh Token 저장소
+- **Refresh Token 저장소:** 인메모리 구현
 - **커스텀 클레임:** `roles: ["ROLE_ADMIN"]` or `["ROLE_USER"]`
 
 ### 3.2 JWT 검증 (리소스 서버)
@@ -175,7 +175,7 @@ assertEquals(3, result.totalUsers)
 
 | 테스트 대상 | 방식 | 테스트 수 |
 |---|---|---|
-| `MatchingService` | TDD (차단 관련 먼저 작성) | 4개 |
+| `MatchingService` | TDD (차단 및 상태 보존 관련 먼저 작성) | 6개 |
 | `AdminService` | TDD (서비스 구현 전 테스트 작성) | 5개 |
 
 ### 6.3 테스트 커버리지 항목
@@ -245,17 +245,9 @@ assertEquals(3, result.totalUsers)
 - matching-module의 내부 포트가 직접 노출되면 ROLE_ADMIN 토큰을 가진 누구나 `/internal/admin/**` 직접 호출 가능.
 - **개선 방향:** 서비스 간 통신에는 서비스 계정 토큰 또는 mTLS 사용.
 
-### 8.3 updateExposure 상태 손실 버그
+### 8.3 updateExposure 상태 손실 버그 — 해결됨
 
-`MatchingService.updateExposure`는 새 `MatchingProfile` 객체를 생성하므로 기존 `isBlocked` 상태가 초기화됨:
-```kotlin
-// 현재: isBlocked 상태 손실
-val profile = MatchingProfile(userId, isExposed, updatedAt = LocalDateTime.now())
-
-// 권장: 기존 상태 보존
-val existing = store.getProfile(userId) ?: MatchingProfile(userId)
-store.saveProfile(existing.copy(isExposed = isExposed, updatedAt = LocalDateTime.now()))
-```
+`MatchingService.updateExposure`가 새 `MatchingProfile`을 생성하면서 기존 `isBlocked` 값을 초기화하던 문제를 해결했습니다. 기존 프로필을 조회한 뒤 변경 대상 필드만 `copy()`로 교체하는 read-modify-write 방식으로 수정했으며, `updateExposure preserves isBlocked status` 회귀 테스트를 추가했습니다. 상세 내용은 [BUG-001](./bug-reports/BUG-001-updateExposure-resets-isBlocked.md)에 기록했습니다.
 
 ### 8.4 감사 로그(Audit Log) 부재
 

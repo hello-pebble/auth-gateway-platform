@@ -26,6 +26,12 @@ spring:
             client-secret: dummy-secret
 
 jwt:
-  secret: test_secret_key_for_testing_purposes_only_1234567890
   access-expiration: 3600000
   refresh-expiration: 86400000
+
+auth:
+  gateway-url: http://localhost:8000
+  redirect-path: /
+  issuer-uri: http://localhost:8080
+  cookie:
+    secure: false

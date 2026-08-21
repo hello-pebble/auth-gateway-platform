@@ -4,7 +4,10 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Read(//mnt/e/IdeaProjects/**)",
-      "Bash(./gradlew :matching-module:build)"
+      "Bash(./gradlew :matching-module:build)",
+      "Bash(git *)",
+      "PowerShell(git *)",
+      "Skill(update-config)"
     ]
   },
   "enabledPlugins": {

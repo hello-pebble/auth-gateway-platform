@@ -1,8 +1,8 @@
 <div align="center">
 
-# ⚙️ JWT 기반 인증 연동 포트폴리오
+# Auth Gateway Platform
 
-**여러 서비스의 로그인과 권한 관리를 단일 인증 서버로 통합하고, 서비스 간 연동 구조를 점진적으로 구축한 포트폴리오**
+Spring Authorization Server와 Spring Cloud Gateway를 활용한 중앙 인증 및 멀티서비스 접근 제어 시스템
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.2.0-7F52FF?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5.3-6DB33F?style=flat-square&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
@@ -15,8 +15,7 @@
 
 ## 🎯 프로젝트 목표
 
-서비스마다 따로 구현된 로그인 체계를 **하나의 인증 서버**로 통합하고,  
-진입 관문·매칭 엔진·관리자 시스템까지 직접 설계·구현한 엔지니어링 포트폴리오.
+서비스마다 따로 구현된 로그인 체계를 **하나의 인증 서버**로 통합하고 검증하는 서비스
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1e293b', 'primaryTextColor': '#f1f5f9', 'lineColor': '#64748b', 'secondaryColor': '#0f172a', 'tertiaryColor': '#1e293b', 'edgeLabelBackground': '#1e293b', 'clusterBkg': '#0f172a', 'clusterBorder': '#334155', 'titleColor': '#f1f5f9'}}}%%

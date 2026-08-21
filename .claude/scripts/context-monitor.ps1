@@ -20,6 +20,12 @@ if (-not $latest) { exit 0 }
 
 $sizeKB = [math]::Round($latest.Length / 1KB, 1)
 
+# 최근 10분 내 요약을 이미 저장했으면 재알림 생략 (매 턴 반복 방지)
+$logDir = Join-Path $PSScriptRoot "..\..\docs\context-logs"
+$recentLog = Get-ChildItem -Path $logDir -Filter "*.md" -ErrorAction SilentlyContinue |
+             Where-Object { $_.LastWriteTime -gt (Get-Date).AddMinutes(-10) }
+if ($recentLog) { exit 0 }
+
 if ($sizeKB -gt $ThresholdKB) {
     $msg  = "WARNING [CONTEXT MANAGER] 컨텍스트 사용량이 임계치(${ThresholdKB}KB)를 초과했습니다 (현재: ${sizeKB}KB)."
     $msg += "`n즉시 다음을 수행하세요:"
